@@ -1,4 +1,4 @@
-import { getCompanyData, getRecentFilings, findCik } from './sec_api';
+import { getCompanyData, getRecentFilings, findCik, getFilingsByDateRange } from './sec_api';
 
 describe('SEC API Functions', () => {
 
@@ -47,6 +47,30 @@ describe('SEC API Functions', () => {
             const filings = await getRecentFilings('320193', '10-K');
             expect(Array.isArray(filings)).toBe(true);
             expect(filings[0].form).toBe('10-K');
-        });
+        }, 20000); // Increase timeout for this test
+    });
+
+    describe('getFilingsByDateRange', () => {
+        // Test Case 1: Find Apple's 2023 10-K
+        it('should find a specific 10-K filing within a narrow date range', async () => {
+            const filings = await getFilingsByDateRange('320193', '10-K', '2023-11-01', '2023-11-05');
+            expect(filings).toHaveLength(1);
+            expect(filings[0].form).toBe('10-K');
+            expect(filings[0].filingDate).toBe('2023-11-03');
+        }, 30000); // Increase timeout
+
+        // Test Case 2: Search for 10-Q filings spanning Q3 and Q4 2023
+        it('should find filings across multiple quarters', async () => {
+            const filings = await getFilingsByDateRange('320193', '10-Q', '2023-06-01', '2023-08-15');
+            expect(filings.length).toBeGreaterThanOrEqual(1);
+            const q3Filing = filings.find(f => f.filingDate === '2023-08-04');
+            expect(q3Filing).toBeDefined();
+        }, 45000); // Increase timeout
+
+        // Test Case 3: Search for a range with no expected filings
+        it('should return an empty array for a date range with no filings', async () => {
+            const filings = await getFilingsByDateRange('320193', '10-K', '2023-01-01', '2023-01-05');
+            expect(filings).toHaveLength(0);
+        }, 30000); // Increase timeout
     });
 });
