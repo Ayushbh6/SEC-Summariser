@@ -115,23 +115,36 @@ export async function autoTitleConversation(conversationId: string): Promise<str
 
 // Subscribe to conversation changes
 export function subscribeToConversations(callback: (conversations: Conversation[]) => void) {
+  let timeoutId: NodeJS.Timeout;
+  
   const channel = supabase
     .channel('conversations_changes')
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'conversations'
-    }, async () => {
-      try {
-        const conversations = await getUserConversations();
-        callback(conversations);
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-      }
+    }, async (payload) => {
+      console.log('🔄 Conversation change detected:', payload.eventType, payload.new || payload.old);
+      
+      // Debounce rapid changes
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        try {
+          const conversations = await getUserConversations();
+          console.log('✅ Updated conversations list:', conversations.length, 'conversations');
+          callback(conversations);
+        } catch (error) {
+          console.error('Error fetching conversations:', error);
+        }
+      }, 100); // 100ms debounce
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('📡 Conversations subscription status:', status);
+    });
 
   return () => {
+    console.log('🔌 Unsubscribing from conversations changes');
+    clearTimeout(timeoutId);
     supabase.removeChannel(channel);
   };
 }

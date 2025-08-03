@@ -25,7 +25,21 @@ export interface CompanyInfo {
     title: string;
 }
 
-async function getCompanyTickers(): Promise<any> {
+interface CompanyData {
+    filings: {
+        recent: {
+            accessionNumber: string[];
+            filingDate: string[];
+            reportDate: string[];
+            form: string[];
+            primaryDocument: string[];
+            [key: string]: unknown;
+        };
+    };
+    [key: string]: unknown;
+}
+
+async function getCompanyTickers(): Promise<Record<string, { cik_str: number; ticker: string; title: string }>> {
     const url = 'https://www.sec.gov/files/company_tickers.json';
     const response = await axiosInstance.get(url);
     return response.data;
@@ -101,7 +115,7 @@ async function fetchFilingContent(url: string): Promise<string> {
                 const rows = Array.from(table.querySelectorAll('tr'));
                 let hasValidContent = false;
                 
-                rows.forEach((row, rowIndex) => {
+                rows.forEach((row) => {
                     const cells = Array.from(row.querySelectorAll('td, th'));
                     const cellTexts = cells.map(cell => {
                         const text = cell.textContent?.trim() || '';
@@ -171,7 +185,7 @@ async function fetchFilingContent(url: string): Promise<string> {
     }
 }
 
-export async function getCompanyData(cik: string): Promise<any> {
+export async function getCompanyData(cik: string): Promise<CompanyData> {
     const paddedCik = padCik(cik);
     const url = `https://data.sec.gov/submissions/CIK${paddedCik}.json`;
 

@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
       } else {
         setMessage('Check your email for a password reset link');
       }
-    } catch (err) {
+          } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Conversation } from '@/types/conversation';
-import { getUserConversations, createConversation, updateConversationTitle, deleteConversation, subscribeToConversations } from '@/lib/conversations';
+import { getUserConversations, updateConversationTitle, deleteConversation, subscribeToConversations } from '@/lib/conversations';
 
 interface ConversationSidebarProps {
   currentConversationId: string | null;

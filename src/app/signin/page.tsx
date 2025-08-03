@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from '@/lib/supabase';
 
-export default function SignInPage() {
+function SignInContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function SignInPage() {
         // Redirect to chat page after successful signin
         router.push('/chat');
       }
-    } catch (err) {
+          } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -134,7 +134,7 @@ export default function SignInPage() {
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
                 Create one here
               </Link>
@@ -158,4 +158,22 @@ export default function SignInPage() {
       </div>
     </div>
   );
+}
+
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex items-center justify-center">
+        <div className="neumorphic-container p-8">
+          <div className="flex items-center space-x-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="text-gray-700">Loading...</span>
+          </div>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
+  )
 }

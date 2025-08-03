@@ -38,7 +38,7 @@ export default function SignUpPage() {
     }
 
     try {
-      const { data, error } = await signUp(email, password, firstName);
+      const { error } = await signUp(email, password, firstName);
       
       if (error) {
         setError(error.message);
@@ -49,7 +49,7 @@ export default function SignUpPage() {
           router.push('/signin?message=Please check your email to confirm your account');
         }, 2000);
       }
-    } catch (err) {
+          } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
