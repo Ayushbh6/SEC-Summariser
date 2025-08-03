@@ -273,7 +273,7 @@ export async function getFilingsByDateRange(cik: string, formType: string, start
                         if (filingIndex !== -1) {
                             reportDate = recentFilings.reportDate[filingIndex];
                         }
-                    } catch (error) {
+                    } catch {
                         console.warn(`Could not fetch report date for ${accessionNumber}, using filing date`);
                     }
                     

@@ -55,6 +55,121 @@ export async function POST(req: Request) {
 
   // Define tools with access to current request context
   const tools: ToolSet = {
+    content_retriever: tool({
+      description:
+        'Retrieves stored SEC filing content from the database for analysis. Use this tool to get the actual text content of filings that have been previously fetched.',
+      inputSchema: z.object({
+        company_ticker: z
+          .string()
+          .optional()
+          .describe('Stock ticker symbol (e.g., "AAPL", "TSLA")'),
+        company_cik: z
+          .string()
+          .optional()
+          .describe('SEC CIK number (e.g., "320193")'),
+        form_type: z
+          .string()
+          .optional()
+          .describe('SEC form type (e.g., "8-K", "10-K", "10-Q")'),
+        filing_accession_number: z
+          .string()
+          .optional()
+          .describe('Specific SEC accession number for direct access'),
+        filing_date_start: z
+          .string()
+          .optional()
+          .describe('Start date for filing date range (YYYY-MM-DD)'),
+        filing_date_end: z
+          .string()
+          .optional()
+          .describe('End date for filing date range (YYYY-MM-DD)'),
+        report_date_start: z
+          .string()
+          .optional()
+          .describe('Start date for report period range (YYYY-MM-DD)'),
+        report_date_end: z
+          .string()
+          .optional()
+          .describe('End date for report period range (YYYY-MM-DD)'),
+        limit: z
+          .number()
+          .optional()
+          .default(10)
+          .describe('Maximum number of reports to return (default: 10)'),
+      }),
+      execute: async ({
+        company_ticker,
+        company_cik,
+        form_type,
+        filing_accession_number,
+        filing_date_start,
+        filing_date_end,
+        report_date_start,
+        report_date_end,
+        limit,
+      }) => {
+        try {
+          let query = authenticatedSupabase
+            .from('reports')
+            .select(`
+              id,
+              company_cik,
+              company_ticker,
+              company_title,
+              form_type,
+              filing_date,
+              report_date,
+              filing_accession_number,
+              filing_url,
+              report_content!inner(filing_content)
+            `)
+            .eq('user_id', user.id)
+            .eq('tool_status', 'completed')
+            .eq('has_content', true);
+
+          // Apply filters based on provided parameters
+          if (company_ticker) query = query.eq('company_ticker', company_ticker);
+          if (company_cik) query = query.eq('company_cik', company_cik);
+          if (form_type) query = query.eq('form_type', form_type);
+          if (filing_accession_number) query = query.eq('filing_accession_number', filing_accession_number);
+          
+          // Date range filters
+          if (filing_date_start) query = query.gte('filing_date', filing_date_start);
+          if (filing_date_end) query = query.lte('filing_date', filing_date_end);
+          if (report_date_start) query = query.gte('report_date', report_date_start);
+          if (report_date_end) query = query.lte('report_date', report_date_end);
+
+          const { data: reports, error } = await query
+            .order('filing_date', { ascending: false })
+            .limit(limit || 10);
+
+          if (error) throw new Error(error.message);
+
+          if (!reports || reports.length === 0) {
+            return `No stored reports found matching your criteria. You may need to use the researcher tool first to fetch filings from the SEC.`;
+          }
+
+          const formattedReports = reports.map(report => ({
+            report_id: report.id,
+            company: report.company_title,
+            ticker: report.company_ticker,
+            cik: report.company_cik,
+            form_type: report.form_type,
+            filing_date: report.filing_date,
+            report_date: report.report_date,
+            accession_number: report.filing_accession_number,
+            filing_url: report.filing_url,
+            content: report.report_content[0]?.filing_content || 'Content not available'
+          }));
+
+          return `Found ${reports.length} stored report(s). Here are the details and full content:
+
+${JSON.stringify(formattedReports, null, 2)}`;
+        } catch (error: unknown) {
+          return `An error occurred while retrieving content: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+      },
+    }),
     researcher: tool({
       description:
         'Finds SEC filings for a given company and stores them in the database. Can search by date range or get the most recent filings.',
@@ -75,21 +190,20 @@ export async function POST(req: Request) {
           .string()
           .optional()
           .describe('The end date for the search range (YYYY-MM-DD).'),
+        limit: z
+          .number()
+          .optional()
+          .default(1)
+          .describe('Number of filings to retrieve (default: 1). Use this for "latest N filings" requests.'),
       }),
       execute: async ({
         companyIdentifier,
         formType,
         startDate,
         endDate,
+        limit,
       }) => {
-        console.log(`🔬 Researcher tool called:`, {
-          companyIdentifier,
-          formType,
-          startDate,
-          endDate,
-          assistantMessageId, // Using assistant message ID instead of user message ID
-          conversationId,
-        });
+
 
         try {
           const companies = await findCik(companyIdentifier);
@@ -107,7 +221,7 @@ export async function POST(req: Request) {
               endDate,
             );
           } else {
-            filings = await getRecentFilings(company.cik, formType, 1);
+            filings = await getRecentFilings(company.cik, formType, limit || 1);
           }
 
           if (filings.length === 0) {
@@ -116,6 +230,18 @@ export async function POST(req: Request) {
 
           const reports = [];
           for (const filing of filings) {
+            // Check if filing already exists for this user
+            const { data: existingReport } = await authenticatedSupabase
+              .from('reports')
+              .select('id, company_title, form_type, filing_date')
+              .eq('user_id', user.id)
+              .eq('filing_accession_number', filing.accessionNumber)
+              .single();
+
+            if (existingReport) {
+              return `Filing ${filing.accessionNumber} for ${filing.form} already exists in your database (filed on ${existingReport.filing_date}). Use the content_retriever tool to access the stored content.`;
+            }
+
             const { data: reportData, error: reportError } =
               await authenticatedSupabase
                 .from('reports')
@@ -129,6 +255,7 @@ export async function POST(req: Request) {
                     formType,
                     startDate,
                     endDate,
+                    limit,
                   },
                   tool_status: 'completed',
                   company_cik: company.cik,
@@ -157,14 +284,18 @@ export async function POST(req: Request) {
 
           const reportSummaries = reports.map(r => ({
             company: r.company_title,
+            ticker: r.company_ticker,
+            cik: r.company_cik,
             formType: r.form_type,
             filingDate: r.filing_date,
+            reportDate: r.report_date,
+            accessionNumber: r.filing_accession_number,
             reportId: r.id,
           }));
 
-          return `Successfully retrieved and stored ${reports.length} filing(s). The following reports are now available for analysis: ${JSON.stringify(reportSummaries, null, 2)}`;
+          return `Successfully retrieved and stored ${reports.length} filing(s). The following reports are now available in the database (metadata only - use content_retriever tool to get actual content for analysis): ${JSON.stringify(reportSummaries, null, 2)}`;
         } catch (error: unknown) {
-          console.error('❌ Error executing researcher tool:', error);
+
           return `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
       },
@@ -221,62 +352,111 @@ You are "SEC-GPT," a specialized AI assistant for financial document analysis. Y
 </guardrails>
 
 <actions>
-Your primary action is to use the \`researcher\` tool to find and retrieve SEC filings based on the user's request. Once a filing is retrieved, you can then answer questions based on its content in subsequent turns.
+Your workflow depends on the user's request:
+
+1. **For NEW filings**: Use \`researcher\` to fetch from SEC, then immediately use \`content_retriever\` to get content for analysis.
+2. **For EXISTING filings**: First try \`content_retriever\` to check if already stored, only use \`researcher\` if not found.
+3. **For ANALYSIS requests**: Always use \`content_retriever\` to get the actual filing content.
+
+Remember: \`researcher\` only stores filings and returns metadata. You MUST use \`content_retriever\` to get actual content for analysis.
 </actions>
 
 <tools_overview>
-You have access to one primary tool: \`researcher\`.
-This tool is your only connection to the SEC EDGAR database. It can find company information, search for specific filings, and store their full text content in a secure database for later analysis.
+You have access to two complementary tools:
+
+1. **\`researcher\`**: Fetches new SEC filings from the EDGAR database and stores them in the database. This tool does NOT return the actual filing content to you.
+
+2. **\`content_retriever\`**: Retrieves previously stored filing content from the database for analysis. This tool returns the actual text content that you can analyze.
+
+**Critical Workflow**: To analyze a filing, you must FIRST use \`researcher\` to fetch and store it, then ALWAYS use \`content_retriever\` to get the actual content for analysis.
 </tools_overview>
 
 <tool_usage>
-The \`researcher\` tool has the following parameters: \`companyIdentifier\`, \`formType\`, \`startDate\` (optional), \`endDate\` (optional).
+**Two-Tool Workflow - IMPORTANT:**
 
-1.  **Interpreting User Requests:** You must translate the user's natural language into the precise parameters the tool requires.
-    - "latest," "most recent," "current" -> Call the tool *without* \`startDate\` and \`endDate\`.
-    - "in 2023," "for the year 2023" -> Calculate the date range: \`startDate: '2023-01-01'\`, \`endDate: '2023-12-31'\`.
-    - "Q2 2024," "second quarter of 2024" -> Calculate the date range: \`startDate: '2024-04-01'\`, \`endDate: '2024-06-30'\`.
-    - "since June 1, 2024" -> Use the provided date as the start and today's date (from the top of this prompt) as the end.
+**Step 1: Use \`researcher\` tool** to fetch NEW filings from SEC:
+- Parameters: \`companyIdentifier\`, \`formType\`, \`startDate\` (optional), \`endDate\` (optional), \`limit\` (optional, default: 1)
+- Purpose: Downloads filing from SEC and stores in database
+- Output: Only metadata confirmation (NO actual content)
 
-2.  **Execution:** Call the tool with the parameters you have derived from the user's request.
+**Step 2: Use \`content_retriever\` tool** to get stored content for analysis:
+- Parameters: \`company_ticker\`, \`company_cik\`, \`form_type\`, \`filing_accession_number\`, date ranges, \`limit\`
+- Purpose: Retrieves actual filing text from database
+- Output: Full filing content for analysis
+
+**When to use each tool:**
+- **New filings**: \`researcher\` → \`content_retriever\`
+- **Previously retrieved filings**: Only \`content_retriever\` (check database first)
+- **Analysis requests**: Always use \`content_retriever\` to get content
+
+**Parameter Usage Examples:**
+- "latest," "most recent" → \`researcher\` without dates, limit: 1
+- "latest 3 filings" → \`limit: 3\` (no dates)
+- "in 2023" → \`startDate: '2023-01-01'\`, \`endDate: '2023-12-31'\`
+- "Q2 2024" → \`startDate: '2024-04-01'\`, \`endDate: '2024-06-30'\`
 </tool_usage>
 
 <tool_output_interpretation>
-When the \`researcher\` tool successfully retrieves and stores filings, it will return a JSON object confirming the details of the reports it saved. Your task is to:
-1.  Parse this output.
-2.  Present a clear, concise confirmation to the user that the requested documents have been retrieved.
-3.  State that you are now ready to answer questions about the content of those specific documents.
-4.  DO NOT attempt to summarize or analyze the filing in the same turn it is retrieved. Wait for the user's next question.
+**\`researcher\` tool output**: Returns only metadata (company, form type, filing date, report ID). This confirms the filing was successfully fetched and stored. You do NOT receive the actual content.
+
+**\`content_retriever\` tool output**: Returns the complete filing text content that you can analyze, along with metadata.
+
+**Your Response Pattern:**
+1. After \`researcher\`: "I have successfully retrieved and stored [filing details]. To analyze the content, I need to retrieve it from the database."
+2. Then immediately use \`content_retriever\` to get the actual content.
+3. After \`content_retriever\`: Now you can analyze and respond to the user's questions about the filing content. **IMPORTANT**: When presenting SEC filing content or analysis, always format it clearly with proper headings, bullet points, and structured sections. Do NOT display raw unformatted text.
+
+**NEVER** attempt to analyze filing content that you received from \`researcher\` - it only provides metadata, not content.
+
+**Content Formatting Guidelines:**
+- Use clear headings and sections when presenting filing information
+- Break down complex information into bullet points
+- Highlight key dates, numbers, and important details
+- Provide structured summaries rather than raw text dumps
+- Format tables and data in readable format
 </tool_output_interpretation>
 
 <few_shot_examples>
 ---
-**Example 1: Latest Filing Request**
+**Example 1: New Filing Request**
 
 **User:** "Get me the latest 10-K for Microsoft."
 
-**Your Thought Process:** The user wants the 'latest' filing. The company is 'Microsoft' and the form is '10-K'. I should call the \`researcher\` tool without date parameters.
+**Your Actions:** 
+1. \`researcher({ companyIdentifier: 'Microsoft', formType: '10-K' })\`
+2. After receiving metadata confirmation: \`content_retriever({ company_ticker: 'MSFT', form_type: '10-K', limit: 1 })\`
+3. Now analyze the content returned by content_retriever
 
-**Your Action:** \`researcher({ companyIdentifier: 'Microsoft', formType: '10-K' })\`
 ---
-**Example 2: Date Range Request**
+**Example 2: Analysis Request**
 
-**User:** "Find all of Tesla's 8-K filings from the first quarter of 2024."
+**User:** "Analyze Apple's latest 8-K filing."
 
-**Your Thought Process:** The user wants filings from 'Q1 2024'. This corresponds to the date range from January 1, 2024, to March 31, 2024. The company is 'Tesla' and the form is '8-K'. I will call the \`researcher\` tool with these specific dates.
+**Your Actions:**
+1. First try: \`content_retriever({ company_ticker: 'AAPL', form_type: '8-K', limit: 1 })\`
+2. If found: Analyze the content immediately
+3. If not found: Use \`researcher\` first, then \`content_retriever\`
 
-**Your Action:** \`researcher({ companyIdentifier: 'Tesla', formType: '8-K', startDate: '2024-01-01', endDate: '2024-03-31' })\`
+---
+**Example 3: Comparison Request**
+
+**User:** "Compare Tesla's last two 10-Q reports."
+
+**Your Actions:**
+1. \`content_retriever({ company_ticker: 'TSLA', form_type: '10-Q', limit: 2 })\`
+2. Analyze and compare the content from both filings
+
 ---
 </few_shot_examples>`,
     messages: coreMessages,
     tools,
     stopWhen: stepCountIs(10),
-    onFinish: async ({ usage, toolCalls, text }) => {
-      if (usage.totalTokens) {
+    onFinish: async (result) => {
+      if (result.usage?.totalTokens) {
         await authenticatedSupabase
           .from('conversations')
           .update({
-            tokens: usage.totalTokens,
+            tokens: result.usage.totalTokens,
             updated_at: new Date().toISOString(),
           })
           .eq('id', conversationId);
@@ -286,8 +466,10 @@ When the \`researcher\` tool successfully retrieves and stores filings, it will 
       await authenticatedSupabase
         .from('messages')
         .update({
-          content: text,
-          metadata: toolCalls && toolCalls.length > 0 ? { tool_calls: toolCalls } : {},
+          content: result.text,
+          metadata: result.response?.messages ? { 
+            tool_calls: result.response.messages 
+          } : {},
         })
         .eq('id', assistantMessageId);
     },
