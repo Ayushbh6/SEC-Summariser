@@ -78,12 +78,32 @@ export async function addMessage(request: AddMessageRequest): Promise<string> {
 
 // Update conversation title
 export async function updateConversationTitle(conversationId: string, title: string): Promise<void> {
-  const { error } = await supabase
-    .from('conversations')
-    .update({ title })
-    .eq('id', conversationId);
+  // Ensure we have an authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
 
-  if (error) throw error;
+  const { data, error } = await supabase
+    .from('conversations')
+    .update({ 
+      title,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', conversationId)
+    .eq('user_id', user.id) // Ensure we're updating our own conversation
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating conversation title:', error);
+    throw error;
+  }
+  
+  if (!data) {
+    console.error('No conversation found or not authorized to update');
+    throw new Error('Failed to update conversation title');
+  }
+  
+  console.log('Successfully updated conversation title:', data);
 }
 
 // Delete a conversation

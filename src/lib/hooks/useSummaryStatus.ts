@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 interface SummaryStatus {
   isProcessing: boolean;
@@ -33,11 +33,6 @@ export function useSummaryStatus(userId: string | undefined, conversationId: str
       });
       return;
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     // Build query for reports with summaries - ONLY for current conversation
     const summaryQuery = supabase

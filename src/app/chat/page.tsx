@@ -37,6 +37,7 @@ export default function ChatPage() {
 
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [isThinking, setIsThinking] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const initializationRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -310,6 +311,8 @@ export default function ChatPage() {
           currentConversationId={currentConversationId}
           onConversationSelect={handleConversationSelect}
           onNewConversation={handleNewConversation}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
 
         <div className="flex-1 flex flex-col">
@@ -335,10 +338,10 @@ export default function ChatPage() {
               <div className="h-full flex items-center justify-center text-center">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-800">
-                    SEC Filing Assistant
+                    Say Hi to Eddie 👋
                   </h3>
                   <p className="text-gray-600 mt-2">
-                    Ask questions about SEC filings to get started.
+                    Type &quot;Hi&quot; to learn about Eddie&apos;s capabilities
                   </p>
                 </div>
               </div>

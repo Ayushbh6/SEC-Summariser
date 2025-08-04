@@ -8,12 +8,16 @@ interface ConversationSidebarProps {
   currentConversationId: string | null;
   onConversationSelect: (conversationId: string) => void;
   onNewConversation: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export default function ConversationSidebar({ 
   currentConversationId, 
   onConversationSelect, 
-  onNewConversation 
+  onNewConversation,
+  isCollapsed = false,
+  onToggleCollapse
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,10 +103,39 @@ export default function ConversationSidebar({
     );
   }
 
+  // Collapsed view - just show a thin sidebar with toggle button
+  if (isCollapsed) {
+    return (
+      <div className="w-12 bg-gray-100 border-r border-gray-300 flex flex-col h-full">
+        <button
+          onClick={onToggleCollapse}
+          className="p-3 hover:bg-gray-200 transition-colors"
+          title="Expand sidebar"
+        >
+          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-80 bg-gray-100 border-r border-gray-300 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-300">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-700">Conversations</h2>
+          <button
+            onClick={onToggleCollapse}
+            className="p-1 hover:bg-gray-200 rounded transition-colors"
+            title="Collapse sidebar"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
         <button
           onClick={handleNewConversation}
           className="w-full neumorphic-button-primary py-3 px-4 text-white font-medium rounded-lg transition-all duration-200 hover:neumorphic-pressed flex items-center justify-center gap-2"
