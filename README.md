@@ -1,5 +1,9 @@
 # SEC Summariser 📊
 
+<div align="center">
+  <img src="public/image.png" alt="SEC Summariser Logo" width="200" />
+</div>
+
 > AI-powered SEC filing analysis platform with dual-tool workflow and intelligent document retrieval
 
 ![SEC Summariser](https://img.shields.io/badge/SEC-Summariser-blue?style=for-the-badge)
