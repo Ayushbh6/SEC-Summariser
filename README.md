@@ -1,38 +1,43 @@
 # SEC Summariser 📊
 
-> AI-powered SEC filing analysis platform with intelligent document retrieval and ChatGPT-style interface
+> AI-powered SEC filing analysis platform with dual-tool workflow and intelligent document retrieval
 
 ![SEC Summariser](https://img.shields.io/badge/SEC-Summariser-blue?style=for-the-badge)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.5-black?style=for-the-badge&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
 ![Supabase](https://img.shields.io/badge/Supabase-Database-green?style=for-the-badge&logo=supabase)
+![Railway](https://img.shields.io/badge/Railway-Deployed-purple?style=for-the-badge&logo=railway)
 
-## ✨ Features
+## ✨ Core Capabilities
 
-### 🤖 AI-Powered Analysis
-- **Intelligent SEC Filing Retrieval** - Find filings by company name, ticker, or CIK
-- **Full Document Content Access** - Complete HTML parsing with structure preservation
-- **AI Chat Interface** - Natural language queries about SEC filings
-- **Multi-turn Conversations** - Persistent chat sessions with memory
+### 🧠 Intelligent AI Agent with Dual-Tool Workflow
+- **SEC-GPT Specialist** - Dedicated AI agent trained for SEC filing analysis
+- **Two-Tool System**: 
+  - `researcher` - Fetches and stores SEC filings with metadata
+  - `content_retriever` - Retrieves stored content for analysis
+- **Smart Workflow Management** - AI automatically chooses when to fetch new vs. retrieve existing filings
+- **Comprehensive System Prompt** - XML-structured instructions with few-shot examples
 
-### 💬 ChatGPT-Style Interface
-- **Professional Chat UI** - Left sidebar with conversation history
-- **Conversation Management** - Create, rename, delete conversations
-- **Auto-title Generation** - Conversations titled from first message
-- **Real-time Sync** - Live updates across sessions
-- **Smart Session Handling** - Persistent state across refresh/tab switch
+### 📊 Advanced SEC Filing Capabilities
+- **Multi-Company Support** - CIK lookup by name or ticker (Apple, MSFT, Tesla, etc.)
+- **Date Range Queries** - "Q3 2024", "in 2023", "latest 3 filings"
+- **Form Type Support** - 10-K, 10-Q, 8-K, DEF 14A, and more
+- **Intelligent Parsing** - HTML to structured Markdown with table preservation
+- **Duplicate Prevention** - Automatic deduplication by user and accession number
 
-### 🔒 Enterprise Security
-- **Supabase Authentication** - Secure user registration and login
-- **Row Level Security (RLS)** - Complete user data isolation
-- **Protected Routes** - Authentication required for chat access
-- **Secure API Integration** - Rate-limited SEC.gov API calls
+### 💬 Production-Ready Chat Interface
+- **Beautiful Tool Visualization** - Apple-simple UI for tool execution
+- **Real-time Streaming** - Live AI responses with typing indicators
+- **Enhanced URL Display** - Clean, actionable SEC filing links
+- **Conversation Management** - Persistent sessions with auto-titling
+- **User-Specific Data** - Complete isolation between users
 
-### 🎨 Modern Design
-- **Neumorphic UI** - Soft, tactile design elements
-- **Responsive Layout** - Works on all device sizes
-- **Loading States** - Smooth user experience
-- **Error Handling** - Graceful error management
+### 🔒 Enterprise-Grade Security & Compliance
+- **SEC Compliance** - User-specific User-Agent headers for all API calls
+- **Row Level Security** - Database-level user isolation
+- **Authenticated API Routes** - JWT-based protection
+- **User Email Integration** - Automatic SEC.gov compliance with user identification
+- **Data Persistence** - Secure storage of filings and chat history
 
 ## 🏗️ Tech Stack
 
@@ -42,17 +47,18 @@
 - **Tailwind CSS** - Utility-first styling
 - **AI SDK** - Vercel's AI SDK for chat interface
 
-### Backend
-- **Supabase** - Database, authentication, and real-time subscriptions
-- **PostgreSQL** - Relational database with RLS
-- **SEC.gov API** - Official SEC filing data
-- **Gemini 2.5 Flash** - Google's LLM for analysis
+### Backend & AI
+- **Supabase** - Database, authentication, real-time subscriptions with RLS
+- **PostgreSQL** - Multi-table schema: conversations, messages, reports, report_content
+- **Gemini 2.5 Flash** - Google's LLM with 10-step tool execution limit
+- **AI SDK v5** - Vercel's AI SDK with streamText, tool system, and UIMessageStreamResponse
+- **SEC.gov API** - Official EDGAR database with user-compliant requests
 
-### Data Processing
-- **Axios** - HTTP client for API requests
-- **Cheerio** - Server-side HTML parsing
-- **Turndown** - HTML to Markdown conversion
-- **Zod** - Runtime type validation
+### Data Processing & Storage
+- **Custom SEC API Layer** - CIK lookup, date range parsing, content fetching
+- **HTML to Markdown** - Cheerio + TurndownService with table preservation
+- **Filing Content Storage** - Separate table for large document content
+- **Tool Call Metadata** - JSONB storage of AI tool execution history
 
 ## 🚀 Quick Start
 
@@ -81,11 +87,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_key
 ```
 
 ### 4. Database Setup
-1. Go to Supabase Dashboard → SQL Editor
-2. Execute files in order:
-   - `supabase/01_create_conversations_table.sql`
-   - `supabase/02_create_messages_table.sql`
-   - `supabase/03_create_helper_functions.sql`
+Set up your Supabase database with the required tables and RLS policies. Contact the development team for the database schema.
 
 ### 5. Run Development Server
 ```bash
@@ -94,33 +96,55 @@ npm run dev
 
 Visit `http://localhost:3000` to start using SEC Summariser!
 
-## 📋 Usage Examples
+## 🎯 AI Agent Usage Examples
 
-### Basic Queries
+### Two-Tool Workflow in Action
+```
+User: "Get me Apple's latest 8-K filing"
+🔍 researcher tool → Fetches from SEC, stores in database
+📄 content_retriever tool → Gets content for analysis
+🤖 AI Response → Structured analysis of the filing
+```
+
+### Natural Language Queries
 ```
 "Get me the latest 10-K for Apple"
-"Show me Microsoft's recent quarterly reports"
-"Find Tesla's 8-K filings from 2024"
+"Show me Tesla's last 3 quarterly reports" 
+"Find Microsoft's 8-K filings from Q2 2024"
+"Analyze Apple's revenue growth from their latest 10-Q"
+"What are the key risk factors in Tesla's most recent filing?"
 ```
 
-### Advanced Analysis
+### Date Range Intelligence
 ```
-"Compare Apple and Microsoft's revenue growth from their latest 10-Ks"
-"What are the main risk factors mentioned in Tesla's latest filing?"
-"Summarize the business segment performance from Google's 10-Q"
+"Get Apple 10-K reports for 2023" → startDate: '2023-01-01', endDate: '2023-12-31'
+"Find Q3 2024 filings" → startDate: '2024-07-01', endDate: '2024-09-30'
+"Latest 5 filings" → limit: 5 (no date range)
 ```
 
-## 🗄️ Database Schema
+## 🗄️ Production Database Schema
 
-### Tables
-- **`conversations`** - Chat session metadata
-- **`messages`** - Individual chat messages
-- **`auth.users`** - User authentication (Supabase)
+### Core Tables
+- **`conversations`** - Chat sessions with user isolation
+- **`messages`** - Chat messages with metadata (JSONB for tool calls)
+- **`reports`** - SEC filing metadata with user_id and message_id links
+- **`report_content`** - Large filing content stored separately
+- **`auth.users`** - Supabase authentication with email compliance
 
-### Security
-- Row Level Security (RLS) enabled
-- Users can only access their own data
-- Real-time subscriptions with user isolation
+### Key Relationships
+```sql
+conversations.user_id → auth.users.id
+messages.conversation_id → conversations.id
+reports.user_id → auth.users.id
+reports.message_id → messages.id (links to assistant message that triggered fetch)
+report_content.report_id → reports.id
+```
+
+### Security & Compliance
+- **Row Level Security (RLS)** on all tables
+- **User email integration** - `reports` table uses authenticated user's email for SEC compliance
+- **Duplicate prevention** - Unique constraint on user_id + filing_accession_number
+- **Tool call tracking** - messages.metadata stores complete tool execution history
 
 ## 🔧 API Integration
 
@@ -164,17 +188,25 @@ Visit `http://localhost:3000` to start using SEC Summariser!
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Railway (Production)
 ```bash
-npm run build
-vercel deploy
+# Already configured with railway.toml
+git push origin main
+# Railway auto-deploys from GitHub
 ```
 
-### Manual Deployment
-```bash
-npm run build
-npm start
+### Environment Variables Required
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key  
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_key
 ```
+
+### Build Configuration
+- **Node.js 18+** compatibility with polyfills
+- **File API polyfill** for server-side AI SDK compatibility
+- **Custom webpack config** for proper bundling
+- **Production optimizations** enabled
 
 ## 🤝 Contributing
 
