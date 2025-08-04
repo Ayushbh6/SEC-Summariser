@@ -38,6 +38,7 @@ export default function ChatPage() {
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [isThinking, setIsThinking] = useState(false);
   const initializationRef = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
 
   // Use summary status hook for realtime updates - pass conversation ID for per-conversation tracking
@@ -126,6 +127,14 @@ export default function ChatPage() {
 
     initializeConversation();
   }, [router]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [input]);
 
   useEffect(() => {
     if (!currentConversationId) return;
@@ -585,8 +594,9 @@ export default function ChatPage() {
                   !currentConversationId || tokenLimit.isLimitReached ? 'opacity-50' : ''
                 }`}
               >
-                <input
-                  className="w-full bg-transparent outline-none text-gray-800"
+                <textarea
+                  ref={textareaRef}
+                  className="w-full bg-transparent outline-none text-gray-800 resize-none"
                   placeholder={
                     tokenLimit.isLimitReached
                       ? 'Conversation limit reached - start a new conversation'
@@ -598,14 +608,23 @@ export default function ChatPage() {
                   disabled={!currentConversationId || tokenLimit.isLimitReached}
                   onChange={event => setInput(event.target.value)}
                   onKeyDown={async event => {
+                    // Enter sends message, Shift+Enter adds newline
                     if (
                       event.key === 'Enter' &&
+                      !event.shiftKey &&
                       input.trim() &&
                       currentConversationId &&
                       !tokenLimit.isLimitReached
                     ) {
+                      event.preventDefault(); // Prevent newline
                       await handleSendMessage();
                     }
+                  }}
+                  rows={1}
+                  style={{
+                    minHeight: '24px',
+                    maxHeight: '120px',
+                    overflowY: 'auto'
                   }}
                 />
               </div>
