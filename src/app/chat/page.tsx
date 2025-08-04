@@ -18,7 +18,6 @@ import {
 } from '@/lib/conversations';
 import { createClient } from '@supabase/supabase-js';
 import ConversationSidebar from '@/components/ConversationSidebar';
-import SummaryNotification from '@/components/SummaryNotification';
 import ExportButton from '@/components/ExportButton';
 import { useSummaryStatus } from '@/lib/hooks/useSummaryStatus';
 import { ExportService } from '@/lib/services/exportService';
@@ -233,15 +232,7 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex flex-col">
-      {/* Summary Notification Component */}
-      <SummaryNotification
-        isProcessing={summaryStatus.isProcessing}
-        processingCount={summaryStatus.processingCount}
-        completedCount={summaryStatus.completedCount}
-        lastCompletedAt={summaryStatus.lastCompletedAt}
-        onExport={handleExportReports}
-        resetCompletedCount={summaryStatus.resetCompletedCount}
-      />
+      {/* Summary Notification Component - Disabled for now */}
       
       <header className="bg-white/50 backdrop-blur-sm border-b border-gray-300 px-6 py-4">
         <nav className="flex justify-between items-center">

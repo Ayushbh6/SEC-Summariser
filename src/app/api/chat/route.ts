@@ -18,6 +18,7 @@ import {
   getFilingsByDateRange,
   type Filing,
 } from '@/lib/sec_api';
+import { summarizeReports } from '@/lib/summarizeReports';
 
 export const maxDuration = 30;
 
@@ -297,16 +298,15 @@ ${JSON.stringify(formattedReports, null, 2)}`;
             reportId: r.id,
           }));
 
-          // After successfully storing reports, trigger the summarization endpoint
-          // We don't need to wait for this to complete.
-          fetch(new URL('/api/summarize-reports', req.url).toString(), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }).catch(error => {
-            console.error('Failed to trigger background summarization:', error);
-          });
+          // After successfully storing reports, trigger background summarization
+          // This is non-blocking - we don't await it
+          summarizeReports()
+            .then(result => {
+              console.log('[Chat API] Background summarization result:', result);
+            })
+            .catch(error => {
+              console.error('[Chat API] Failed to trigger background summarization:', error);
+            });
 
           return `Successfully retrieved and stored ${reports.length} filing(s). The following reports are now available in the database (metadata only - use content_retriever tool to get actual content for analysis): ${JSON.stringify(reportSummaries, null, 2)}`;
         } catch (error: unknown) {

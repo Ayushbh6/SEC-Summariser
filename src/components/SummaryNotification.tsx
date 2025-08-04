@@ -31,8 +31,14 @@ export default function SummaryNotification({
         }
       );
     } else {
+      // Dismiss the loading toast when processing is done
       toast.dismiss('summary-processing');
     }
+    
+    // Cleanup function to dismiss toast when component unmounts
+    return () => {
+      toast.dismiss('summary-processing');
+    };
   }, [isProcessing, processingCount]);
 
   // Show completion notification
