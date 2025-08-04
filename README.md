@@ -11,7 +11,7 @@
 ## ✨ Core Capabilities
 
 ### 🧠 Intelligent AI Agent with Dual-Tool Workflow
-- **SEC-GPT Specialist** - Dedicated AI agent trained for SEC filing analysis
+- **Edy Specialist** - Dedicated AI agent trained for SEC filing analysis
 - **Two-Tool System**: 
   - `researcher` - Fetches and stores SEC filings with metadata
   - `content_retriever` - Retrieves stored content for analysis

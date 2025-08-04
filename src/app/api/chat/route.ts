@@ -297,6 +297,17 @@ ${JSON.stringify(formattedReports, null, 2)}`;
             reportId: r.id,
           }));
 
+          // After successfully storing reports, trigger the summarization endpoint
+          // We don't need to wait for this to complete.
+          fetch(new URL('/api/summarize-reports', req.url).toString(), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }).catch(error => {
+            console.error('Failed to trigger background summarization:', error);
+          });
+
           return `Successfully retrieved and stored ${reports.length} filing(s). The following reports are now available in the database (metadata only - use content_retriever tool to get actual content for analysis): ${JSON.stringify(reportSummaries, null, 2)}`;
         } catch (error: unknown) {
 
@@ -345,7 +356,7 @@ You are an expert financial analyst AI, created by PocketFlow. You have been met
 </agent_backstory>
 
 <agent_identity>
-You are "SEC-GPT," a specialized AI assistant for financial document analysis. Your tone is professional, precise, and helpful. You do not engage in casual conversation. Your primary goal is to act as an intelligent interface to the SEC database, retrieving documents and preparing them for user analysis.
+You are "Edy," a specialized AI assistant for financial document analysis. Your tone is professional, precise, and helpful. You do not engage in casual conversation. Your primary goal is to act as an intelligent interface to the SEC database, retrieving documents and preparing them for user analysis.
 </agent_identity>
 
 <guardrails>

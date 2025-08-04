@@ -2,7 +2,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -18,6 +18,11 @@ import {
 } from '@/lib/conversations';
 import { createClient } from '@supabase/supabase-js';
 import ConversationSidebar from '@/components/ConversationSidebar';
+import SummaryNotification from '@/components/SummaryNotification';
+import ExportButton from '@/components/ExportButton';
+import { useSummaryStatus } from '@/lib/hooks/useSummaryStatus';
+import { ExportService } from '@/lib/services/exportService';
+import toast from 'react-hot-toast';
 import type { User } from '@supabase/supabase-js';
 import type { ChatMessage } from '@/app/api/chat/route';
 
@@ -33,6 +38,9 @@ export default function ChatPage() {
   const [isThinking, setIsThinking] = useState(false);
   const initializationRef = useRef(false);
   const router = useRouter();
+
+  // Use summary status hook for realtime updates - pass conversation ID for per-conversation tracking
+  const summaryStatus = useSummaryStatus(user?.id, currentConversationId);
 
   const { messages, sendMessage, setMessages } = useChat<ChatMessage>({
     transport: new DefaultChatTransport({
@@ -186,6 +194,30 @@ export default function ChatPage() {
     setIsFirstMessage(true);
   };
 
+  const handleExportReports = useCallback(async () => {
+    try {
+      const supabaseClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const userToken = session?.access_token;
+
+      if (!userToken) {
+        toast.error('Please sign in to export reports');
+        return;
+      }
+
+      await ExportService.exportReportsToExcel(userToken, currentConversationId);
+      toast.success(currentConversationId 
+        ? 'Conversation reports exported successfully!' 
+        : 'All reports exported successfully!');
+    } catch (error) {
+      toast.error('Failed to export reports. Please try again.');
+      console.error('Export error:', error);
+    }
+  }, [currentConversationId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex items-center justify-center">
@@ -201,6 +233,16 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex flex-col">
+      {/* Summary Notification Component */}
+      <SummaryNotification
+        isProcessing={summaryStatus.isProcessing}
+        processingCount={summaryStatus.processingCount}
+        completedCount={summaryStatus.completedCount}
+        lastCompletedAt={summaryStatus.lastCompletedAt}
+        onExport={handleExportReports}
+        resetCompletedCount={summaryStatus.resetCompletedCount}
+      />
+      
       <header className="bg-white/50 backdrop-blur-sm border-b border-gray-300 px-6 py-4">
         <nav className="flex justify-between items-center">
           <Link href="/">
@@ -216,6 +258,10 @@ export default function ChatPage() {
                 Welcome, {user.user_metadata?.first_name || user.email}
               </span>
             </div>
+            <ExportButton
+              availableSummaries={summaryStatus.availableSummaries}
+              onExport={handleExportReports}
+            />
             <button
               onClick={handleSignOut}
               className="neumorphic-button px-6 py-3 text-gray-700 font-medium"
