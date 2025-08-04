@@ -318,6 +318,31 @@ ${JSON.stringify(formattedReports, null, 2)}`;
   };
 
   // Create assistant message first to get the message ID for tool calls
+  // Check current token count before processing
+  const { data: currentConversation, error: conversationError } = 
+    await authenticatedSupabase
+      .from('conversations')
+      .select('tokens')
+      .eq('id', conversationId)
+      .single();
+
+  if (conversationError) {
+    throw new Error(`Failed to get conversation: ${conversationError.message}`);
+  }
+
+  const currentTokens = currentConversation?.tokens || 0;
+  
+  // Hard limit at 480k tokens
+  if (currentTokens >= 480000) {
+    return new Response(JSON.stringify({ 
+      error: 'Token limit exceeded. Please start a new conversation.',
+      tokenLimitExceeded: true,
+      currentTokens 
+    }), {
+      status: 403,
+    });
+  }
+
   const { data: assistantMessage, error: assistantMessageError } =
     await authenticatedSupabase
       .from('messages')
@@ -468,10 +493,12 @@ You have access to two complementary tools:
     stopWhen: stepCountIs(10),
     onFinish: async (result) => {
       if (result.usage?.totalTokens) {
+        // Accumulate tokens instead of replacing
+        const newTotalTokens = currentTokens + result.usage.totalTokens;
         await authenticatedSupabase
           .from('conversations')
           .update({
-            tokens: result.usage.totalTokens,
+            tokens: newTotalTokens,
             updated_at: new Date().toISOString(),
           })
           .eq('id', conversationId);
@@ -493,6 +520,9 @@ You have access to two complementary tools:
   return result.toUIMessageStreamResponse({
     messageMetadata: () => ({
       conversationId: conversationId,
+      currentTokens: currentTokens,
+      tokenWarning: currentTokens >= 400000,
+      tokenLimitApproaching: currentTokens >= 480000,
     }),
   });
 }

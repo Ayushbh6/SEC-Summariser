@@ -13,6 +13,22 @@ export async function getUserConversations(): Promise<Conversation[]> {
   return data || [];
 }
 
+// Get token count for a specific conversation
+export async function getConversationTokens(conversationId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('tokens')
+    .eq('id', conversationId)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching conversation tokens:', error);
+    return 0;
+  }
+  
+  return data?.tokens || 0;
+}
+
 // Create a new conversation
 export async function createConversation(request: CreateConversationRequest = {}): Promise<string> {
   const { data: user } = await supabase.auth.getUser();

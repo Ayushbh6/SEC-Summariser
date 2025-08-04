@@ -19,7 +19,9 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import ConversationSidebar from '@/components/ConversationSidebar';
 import ExportButton from '@/components/ExportButton';
+import TokenWarning from '@/components/TokenWarning';
 import { useSummaryStatus } from '@/lib/hooks/useSummaryStatus';
+import { useTokenLimit } from '@/lib/hooks/useTokenLimit';
 import { ExportService } from '@/lib/services/exportService';
 import toast from 'react-hot-toast';
 import type { User } from '@supabase/supabase-js';
@@ -40,11 +42,27 @@ export default function ChatPage() {
 
   // Use summary status hook for realtime updates - pass conversation ID for per-conversation tracking
   const summaryStatus = useSummaryStatus(user?.id, currentConversationId);
+  
+  // Use token limit hook to track conversation token usage
+  const tokenLimit = useTokenLimit(currentConversationId);
 
   const { messages, sendMessage, setMessages } = useChat<ChatMessage>({
     transport: new DefaultChatTransport({
       api: '/api/chat',
     }),
+    onError: (error: Error) => {
+      setIsThinking(false);
+      
+      // Check if it's a token limit error
+      if (error?.message?.includes('Token limit exceeded') || error?.message?.includes('403')) {
+        toast.error('Conversation length limit reached. Please start a new conversation.');
+        // Refresh token status
+        tokenLimit.refetch();
+      } else {
+        toast.error('An error occurred. Please try again.');
+        console.error('Chat error:', error);
+      }
+    },
     onFinish: async ({ message }) => {
       setIsThinking(false);
 
@@ -62,6 +80,9 @@ export default function ChatPage() {
           console.error('❌ Error auto-titling conversation:', error);
         }
       }
+      
+      // Refresh token status after message completes
+      tokenLimit.refetch();
     },
   });
 
@@ -142,6 +163,12 @@ export default function ChatPage() {
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
+    
+    // Check if token limit is reached
+    if (tokenLimit.isLimitReached) {
+      toast.error('Conversation length limit reached. Please start a new conversation.');
+      return;
+    }
 
     let conversationId = currentConversationId;
     if (!conversationId) {
@@ -232,7 +259,13 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex flex-col">
-      {/* Summary Notification Component - Disabled for now */}
+      {/* Token Warning Component */}
+      <TokenWarning
+        isWarning={tokenLimit.isWarning}
+        isLimitReached={tokenLimit.isLimitReached}
+        percentageUsed={tokenLimit.percentageUsed}
+        onNewConversation={handleNewConversation}
+      />
       
       <header className="bg-white/50 backdrop-blur-sm border-b border-gray-300 px-6 py-4">
         <nav className="flex justify-between items-center">
@@ -549,24 +582,27 @@ export default function ChatPage() {
             <div className="max-w-4xl mx-auto flex space-x-4">
               <div
                 className={`flex-1 neumorphic-container p-4 ${
-                  !currentConversationId ? 'opacity-50' : ''
+                  !currentConversationId || tokenLimit.isLimitReached ? 'opacity-50' : ''
                 }`}
               >
                 <input
                   className="w-full bg-transparent outline-none text-gray-800"
                   placeholder={
-                    currentConversationId
+                    tokenLimit.isLimitReached
+                      ? 'Conversation limit reached - start a new conversation'
+                      : currentConversationId
                       ? 'Ask about SEC filings...'
                       : 'Select a conversation'
                   }
                   value={input}
-                  disabled={!currentConversationId}
+                  disabled={!currentConversationId || tokenLimit.isLimitReached}
                   onChange={event => setInput(event.target.value)}
                   onKeyDown={async event => {
                     if (
                       event.key === 'Enter' &&
                       input.trim() &&
-                      currentConversationId
+                      currentConversationId &&
+                      !tokenLimit.isLimitReached
                     ) {
                       await handleSendMessage();
                     }
@@ -575,7 +611,7 @@ export default function ChatPage() {
               </div>
               <button
                 onClick={handleSendMessage}
-                disabled={!input.trim() || !currentConversationId}
+                disabled={!input.trim() || !currentConversationId || tokenLimit.isLimitReached}
                 className="neumorphic-button-primary px-6 py-4 text-white font-medium"
               >
                 Send
