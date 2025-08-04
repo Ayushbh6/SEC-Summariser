@@ -206,7 +206,7 @@ ${JSON.stringify(formattedReports, null, 2)}`;
 
 
         try {
-          const companies = await findCik(companyIdentifier);
+          const companies = await findCik(companyIdentifier, user.email!);
           if (companies.length === 0) {
             return `Could not find a CIK for "${companyIdentifier}".`;
           }
@@ -219,9 +219,10 @@ ${JSON.stringify(formattedReports, null, 2)}`;
               formType,
               startDate,
               endDate,
+              user.email!
             );
           } else {
-            filings = await getRecentFilings(company.cik, formType, limit || 1);
+            filings = await getRecentFilings(company.cik, formType, limit || 1, user.email!);
           }
 
           if (filings.length === 0) {

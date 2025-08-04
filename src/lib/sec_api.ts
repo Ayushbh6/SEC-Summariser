@@ -2,12 +2,14 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import TurndownService from 'turndown';
 
-// As per SEC guidelines, a custom User-Agent is required.
-const axiosInstance = axios.create({
-    headers: {
-        'User-Agent': 'PocketFlow/1.0 (bhatt.ayush.1998@gmail.com)'
-    }
-});
+// Helper function to create user-specific axios instance for SEC compliance
+function createSecAxiosInstance(userEmail: string) {
+    return axios.create({
+        headers: {
+            'User-Agent': `SEC-Sumariser/1.0 (${userEmail})`
+        }
+    });
+}
 
 export interface Filing {
     accessionNumber: string;
@@ -65,14 +67,15 @@ function getQuartersInRange(startDate: string, endDate: string): { year: number,
 }
 
 
-async function getCompanyTickers(): Promise<Record<string, { cik_str: number; ticker: string; title: string }>> {
+async function getCompanyTickers(userEmail: string): Promise<Record<string, { cik_str: number; ticker: string; title: string }>> {
     const url = 'https://www.sec.gov/files/company_tickers.json';
+    const axiosInstance = createSecAxiosInstance(userEmail);
     const response = await axiosInstance.get(url);
     return response.data;
 }
 
-export async function findCik(identifier: string): Promise<CompanyInfo[]> {
-    const companies = await getCompanyTickers();
+export async function findCik(identifier: string, userEmail: string): Promise<CompanyInfo[]> {
+    const companies = await getCompanyTickers(userEmail);
     const lowerCaseIdentifier = identifier.toLowerCase();
     const results: CompanyInfo[] = [];
 
@@ -111,8 +114,9 @@ function padCik(cik: string): string {
     return cik.padStart(10, '0');
 }
 
-async function fetchFilingContent(url: string): Promise<string> {
+async function fetchFilingContent(url: string, userEmail: string): Promise<string> {
     try {
+        const axiosInstance = createSecAxiosInstance(userEmail);
         const response = await axiosInstance.get(url);
         const $ = cheerio.load(response.data);
         
@@ -196,11 +200,12 @@ async function fetchFilingContent(url: string): Promise<string> {
     }
 }
 
-export async function getCompanyData(cik: string): Promise<CompanyData> {
+export async function getCompanyData(cik: string, userEmail: string): Promise<CompanyData> {
     const paddedCik = padCik(cik);
     const url = `https://data.sec.gov/submissions/CIK${paddedCik}.json`;
 
     try {
+        const axiosInstance = createSecAxiosInstance(userEmail);
         const response = await axiosInstance.get(url);
         return response.data;
     } catch (error) {
@@ -209,8 +214,8 @@ export async function getCompanyData(cik: string): Promise<CompanyData> {
     }
 }
 
-export async function getRecentFilings(cik: string, formType: string, limit: number = 10): Promise<Filing[]> {
-    const companyData = await getCompanyData(cik);
+export async function getRecentFilings(cik: string, formType: string, limit: number = 10, userEmail: string): Promise<Filing[]> {
+    const companyData = await getCompanyData(cik, userEmail);
     const recentFilings = companyData.filings.recent;
     const filings: Filing[] = [];
     let foundCount = 0;
@@ -227,7 +232,7 @@ export async function getRecentFilings(cik: string, formType: string, limit: num
                 form: recentFilings.form[i],
                 primaryDocument: recentFilings.primaryDocument[i],
                 url: url,
-                fullText: await fetchFilingContent(url)
+                fullText: await fetchFilingContent(url, userEmail)
             };
             filings.push(filing);
             foundCount++;
@@ -236,7 +241,7 @@ export async function getRecentFilings(cik: string, formType: string, limit: num
     return filings;
 }
 
-export async function getFilingsByDateRange(cik: string, formType: string, startDate: string, endDate: string): Promise<Filing[]> {
+export async function getFilingsByDateRange(cik: string, formType: string, startDate: string, endDate: string, userEmail: string): Promise<Filing[]> {
     const quarters = getQuartersInRange(startDate, endDate);
     const filings: Filing[] = [];
     const start = new Date(startDate);
@@ -245,6 +250,7 @@ export async function getFilingsByDateRange(cik: string, formType: string, start
     for (const { year, quarter } of quarters) {
         const url = `https://www.sec.gov/Archives/edgar/full-index/${year}/QTR${quarter}/master.idx`;
         try {
+            const axiosInstance = createSecAxiosInstance(userEmail);
             const response = await axiosInstance.get(url, { responseType: 'text' });
             const lines = response.data.split('\n');
             const dataLines = lines.slice(11); // Skip header lines
@@ -265,7 +271,7 @@ export async function getFilingsByDateRange(cik: string, formType: string, start
                     // Get the actual report date by fetching company data and finding this filing
                     let reportDate = lineFilingDate; // Default to filing date if not found
                     try {
-                        const companyData = await getCompanyData(cik);
+                        const companyData = await getCompanyData(cik, userEmail);
                         const recentFilings = companyData.filings.recent;
                         const filingIndex = recentFilings.accessionNumber.findIndex(acc => 
                             acc.replace(/-/g, '') === accessionNumber
@@ -284,7 +290,7 @@ export async function getFilingsByDateRange(cik: string, formType: string, start
                         form: lineFormType,
                         primaryDocument: docUrl.split('/').pop() || 'N/A',
                         url: docUrl,
-                        fullText: await fetchFilingContent(docUrl)
+                        fullText: await fetchFilingContent(docUrl, userEmail)
                     };
                     filings.push(filing);
                 }
