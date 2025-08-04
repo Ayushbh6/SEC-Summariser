@@ -1,3 +1,6 @@
+// Import polyfills first
+import '@/lib/polyfills';
+
 import { google } from '@ai-sdk/google';
 import {
   streamText,
