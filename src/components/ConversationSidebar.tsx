@@ -97,8 +97,8 @@ export default function ConversationSidebar({
 
   if (loading) {
     return (
-      <div className="w-80 bg-gray-100 border-r border-gray-300 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex items-center justify-center">
+        <div className="text-[var(--foreground-secondary)]">Loading...</div>
       </div>
     );
   }
@@ -106,13 +106,13 @@ export default function ConversationSidebar({
   // Collapsed view - just show a thin sidebar with toggle button
   if (isCollapsed) {
     return (
-      <div className="w-12 bg-gray-100 border-r border-gray-300 flex flex-col h-full">
+      <div className="w-12 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex flex-col h-full">
         <button
           onClick={onToggleCollapse}
-          className="p-3 hover:bg-gray-200 transition-colors"
+          className="p-3 hover:bg-[var(--neumorphic-bg)] transition-colors"
           title="Expand sidebar"
         >
-          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--foreground-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -121,17 +121,17 @@ export default function ConversationSidebar({
   }
 
   return (
-    <div className="w-80 bg-gray-100 border-r border-gray-300 flex flex-col h-full">
+    <div className="w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-300">
+      <div className="p-4 border-b border-[var(--border-color)]">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-700">Conversations</h2>
+          <h2 className="font-semibold text-[var(--foreground)]">Conversations</h2>
           <button
             onClick={onToggleCollapse}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
+            className="p-1 hover:bg-[var(--neumorphic-bg)] rounded transition-colors"
             title="Collapse sidebar"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-[var(--foreground-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -150,7 +150,7 @@ export default function ConversationSidebar({
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
+          <div className="p-4 text-center text-[var(--foreground-secondary)]">
             <p>No conversations yet</p>
             <p className="text-sm mt-1">Start a new conversation to begin</p>
           </div>
@@ -161,8 +161,8 @@ export default function ConversationSidebar({
                 key={conversation.id}
                 className={`group relative neumorphic-container p-3 cursor-pointer transition-all duration-200 hover:shadow-lg ${
                   currentConversationId === conversation.id
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'hover:bg-gray-50'
+                    ? 'bg-blue-600/10 dark:bg-blue-400/10 border-blue-600 dark:border-blue-400'
+                    : 'hover:bg-[var(--neumorphic-bg)]'
                 }`}
                 onClick={() => !editingId && onConversationSelect(conversation.id)}
               >
@@ -172,7 +172,7 @@ export default function ConversationSidebar({
                       type="text"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-sm"
+                      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] text-[var(--foreground)] rounded px-2 py-1 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleRename(conversation.id, editTitle);
@@ -185,13 +185,13 @@ export default function ConversationSidebar({
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleRename(conversation.id, editTitle)}
-                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                        className="text-xs bg-blue-600 dark:bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700 dark:hover:bg-blue-600"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="text-xs bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500"
+                        className="text-xs bg-gray-400 dark:bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500 dark:hover:bg-gray-700"
                       >
                         Cancel
                       </button>
@@ -201,14 +201,14 @@ export default function ConversationSidebar({
                   <>
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-800 truncate text-sm">
+                        <h3 className="font-medium text-[var(--foreground)] truncate text-sm">
                           {conversation.title}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-[var(--foreground-secondary)] mt-1">
                           {formatDate(conversation.updated_at)}
                         </p>
                         {conversation.last_message_content && (
-                          <p className="text-xs text-gray-400 mt-1 truncate">
+                          <p className="text-xs text-[var(--foreground-secondary)] opacity-70 mt-1 truncate">
                             {conversation.last_message_content}
                           </p>
                         )}
@@ -221,7 +221,7 @@ export default function ConversationSidebar({
                             e.stopPropagation();
                             startEditing(conversation);
                           }}
-                          className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-gray-700"
+                          className="p-1 hover:bg-[var(--neumorphic-bg)] rounded text-[var(--foreground-secondary)] hover:text-[var(--foreground)]"
                           title="Rename"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,7 +233,7 @@ export default function ConversationSidebar({
                             e.stopPropagation();
                             handleDelete(conversation.id);
                           }}
-                          className="p-1 hover:bg-red-100 rounded text-gray-500 hover:text-red-600"
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-[var(--foreground-secondary)] hover:text-red-600 dark:hover:text-red-400"
                           title="Delete"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

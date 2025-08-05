@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from '@/lib/supabase';
+import ThemeToggle from '@/components/ThemeToggle';
 
 function SignInContent() {
   const [email, setEmail] = useState('');
@@ -55,32 +56,37 @@ function SignInContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-[var(--gradient-from)] to-[var(--gradient-to)] flex items-center justify-center px-6 py-12 transition-colors duration-300">
+      {/* Theme Toggle - positioned absolutely */}
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+      
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/">
             <div className="neumorphic-container inline-block px-6 py-3 mb-6 cursor-pointer">
-              <h1 className="text-2xl font-bold text-gray-700">SEC Summariser</h1>
+              <h1 className="text-2xl font-bold text-[var(--foreground)]">SEC Summariser</h1>
             </div>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-          <p className="text-gray-600">Sign in to continue your SEC analysis</p>
+          <h2 className="text-3xl font-bold text-[var(--foreground)] mb-2">Welcome Back</h2>
+          <p className="text-[var(--foreground-secondary)]">Sign in to continue your SEC analysis</p>
         </div>
 
         {/* Sign In Form */}
         <div className="neumorphic-container-large p-8">
           {/* Success Message */}
           {message && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-green-600 text-sm">{message}</p>
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+              <p className="text-green-600 dark:text-green-400 text-sm">{message}</p>
             </div>
           )}
 
           <form onSubmit={handleSignIn} className="space-y-6">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Email Address
               </label>
               <div className="neumorphic-container p-4">
@@ -89,7 +95,7 @@ function SignInContent() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent outline-none text-gray-800 placeholder-gray-500"
+                  className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
                   placeholder="Enter your email"
                   required
                 />
@@ -98,7 +104,7 @@ function SignInContent() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Password
               </label>
               <div className="neumorphic-container p-4">
@@ -107,7 +113,7 @@ function SignInContent() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent outline-none text-gray-800 placeholder-gray-500"
+                  className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
                   placeholder="Enter your password"
                   required
                 />
@@ -116,8 +122,8 @@ function SignInContent() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
               </div>
             )}
 
@@ -133,9 +139,9 @@ function SignInContent() {
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-[var(--foreground-secondary)]">
               Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link href="/signup" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
                 Create one here
               </Link>
             </p>
@@ -143,7 +149,7 @@ function SignInContent() {
 
           {/* Forgot Password */}
           <div className="mt-4 text-center">
-            <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-700">
+            <Link href="/forgot-password" className="text-sm text-[var(--foreground-secondary)] hover:text-[var(--foreground)]">
               Forgot your password?
             </Link>
           </div>
@@ -151,7 +157,7 @@ function SignInContent() {
 
         {/* Back to Home */}
         <div className="text-center mt-6">
-          <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm">
+          <Link href="/" className="text-[var(--foreground-secondary)] hover:text-[var(--foreground)] text-sm">
             ← Back to Home
           </Link>
         </div>
@@ -164,11 +170,11 @@ function SignInContent() {
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[var(--gradient-from)] to-[var(--gradient-to)] flex items-center justify-center transition-colors duration-300">
         <div className="neumorphic-container p-8">
           <div className="flex items-center space-x-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="text-gray-700">Loading...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            <span className="text-[var(--foreground)]">Loading...</span>
           </div>
         </div>
       </div>

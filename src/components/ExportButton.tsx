@@ -31,12 +31,12 @@ export default function ExportButton({ availableSummaries, onExport }: ExportBut
     <button
       onClick={handleExport}
       disabled={isExporting}
-      className="neumorphic-button relative px-6 py-3 text-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+      className="neumorphic-button relative px-6 py-3 text-[var(--foreground)] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <div className="flex items-center gap-2">
         {isExporting ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--foreground)]"></div>
             <span>Exporting...</span>
           </>
         ) : (
@@ -59,7 +59,7 @@ export default function ExportButton({ availableSummaries, onExport }: ExportBut
         )}
       </div>
       {availableSummaries > 0 && !isExporting && (
-        <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+        <div className="absolute -top-2 -right-2 bg-blue-600 dark:bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
           {availableSummaries}
         </div>
       )}

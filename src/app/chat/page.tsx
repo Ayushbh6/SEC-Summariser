@@ -20,6 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 import ConversationSidebar from '@/components/ConversationSidebar';
 import ExportButton from '@/components/ExportButton';
 import TokenWarning from '@/components/TokenWarning';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useSummaryStatus } from '@/lib/hooks/useSummaryStatus';
 import { useTokenLimit } from '@/lib/hooks/useTokenLimit';
 import { ExportService } from '@/lib/services/exportService';
@@ -256,10 +257,10 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[var(--gradient-from)] to-[var(--gradient-to)] flex items-center justify-center transition-colors duration-300">
         <div className="neumorphic-container p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-700 ml-4">Loading...</span>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+          <span className="text-[var(--foreground)] ml-4">Loading...</span>
         </div>
       </div>
     );
@@ -268,7 +269,7 @@ export default function ChatPage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-[#e8e8e8] to-[#d4d4d4] flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-[var(--gradient-from)] to-[var(--gradient-to)] flex flex-col transition-colors duration-300">
       {/* Token Warning Component */}
       <TokenWarning
         isWarning={tokenLimit.isWarning}
@@ -277,28 +278,29 @@ export default function ChatPage() {
         onNewConversation={handleNewConversation}
       />
       
-      <header className="bg-white/50 backdrop-blur-sm border-b border-gray-300 px-6 py-4">
+      <header className="bg-[var(--card-bg)]/50 backdrop-blur-sm border-b border-[var(--border-color)] px-6 py-4">
         <nav className="flex justify-between items-center">
           <Link href="/">
             <div className="neumorphic-container px-6 py-3 cursor-pointer">
-              <h1 className="text-2xl font-bold text-gray-700">
+              <h1 className="text-2xl font-bold text-[var(--foreground)]">
                 SEC Summariser
               </h1>
             </div>
           </Link>
           <div className="flex items-center space-x-4">
             <div className="neumorphic-container px-4 py-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-[var(--foreground-secondary)]">
                 Welcome, {user.user_metadata?.first_name || user.email}
               </span>
             </div>
+            <ThemeToggle />
             <ExportButton
               availableSummaries={summaryStatus.availableSummaries}
               onExport={handleExportReports}
             />
             <button
               onClick={handleSignOut}
-              className="neumorphic-button px-6 py-3 text-gray-700 font-medium"
+              className="neumorphic-button px-6 py-3 text-[var(--foreground)] font-medium"
             >
               Sign Out
             </button>
@@ -320,15 +322,15 @@ export default function ChatPage() {
             {!currentConversationId ? (
               <div className="h-full flex items-center justify-center text-center">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800">
+                  <h3 className="text-2xl font-bold text-[var(--foreground)]">
                     Welcome Back!
                   </h3>
-                  <p className="text-gray-600 mt-2">
+                  <p className="text-[var(--foreground-secondary)] mt-2">
                     Select or start a conversation to analyze SEC filings.
                   </p>
                   <button
                     onClick={handleNewConversation}
-                    className="neumorphic-button mt-6 px-8 py-4"
+                    className="neumorphic-button mt-6 px-8 py-4 text-[var(--foreground)]"
                   >
                     Start New Conversation
                   </button>
@@ -337,10 +339,10 @@ export default function ChatPage() {
             ) : messages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-center">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800">
+                  <h3 className="text-2xl font-bold text-[var(--foreground)]">
                     Say Hi to Eddie 👋
                   </h3>
-                  <p className="text-gray-600 mt-2">
+                  <p className="text-[var(--foreground-secondary)] mt-2">
                     Type &quot;Hi&quot; to learn about Eddie&apos;s capabilities
                   </p>
                 </div>
@@ -355,10 +357,10 @@ export default function ChatPage() {
                     }`}
                   >
                     <div
-                      className={`max-w-[80%] p-4 rounded-2xl ${
+                      className={`max-w-[80%] p-4 rounded-2xl overflow-hidden ${
                         message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'neumorphic-card bg-white'
+                          ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                          : 'neumorphic-card bg-[var(--card-bg)] text-[var(--foreground)]'
                       }`}
                     >
                       {message.parts.map((part, i) => {
@@ -373,17 +375,24 @@ export default function ChatPage() {
                             if (urlMatch) {
                               return (
                                 <div key={`${message.id}-text-${i}`} className="space-y-4">
-                                  <div className="prose prose-sm max-w-none">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  <div className="prose prose-sm max-w-none break-words overflow-wrap-anywhere">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        p: ({children}) => <p className="break-words overflow-wrap-anywhere">{children}</p>,
+                                        a: ({children, href}) => <a href={href} className="break-all text-blue-600 dark:text-blue-400 hover:underline">{children}</a>,
+                                        code: ({children}) => <code className="break-all bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>
+                                      }}
+                                    >
                                       {text}
                                     </ReactMarkdown>
                                   </div>
                                   
                                   {/* Apple-simple URL display */}
-                                  <div className="bg-white border border-gray-200 rounded-xl p-4 mt-4 shadow-sm">
+                                  <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 mt-4 shadow-sm">
                                     <div className="flex items-center justify-between gap-4">
                                       <div className="flex-1 min-w-0">
-                                        <code className="text-sm text-gray-600 break-all">
+                                        <code className="text-sm text-[var(--foreground-secondary)] break-all">
                                           {urlMatch[1]}
                                         </code>
                                       </div>
@@ -391,7 +400,7 @@ export default function ChatPage() {
                                         href={urlMatch[1]}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                                        className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
                                       >
                                         Open Filing
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,9 +417,17 @@ export default function ChatPage() {
                             return (
                               <div
                                 key={`${message.id}-text-${i}`}
-                                className="prose prose-sm max-w-none"
+                                className="prose prose-sm max-w-none break-words overflow-wrap-anywhere"
                               >
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: ({children}) => <p className="break-words overflow-wrap-anywhere">{children}</p>,
+                                    a: ({children, href}) => <a href={href} className="break-all text-blue-600 dark:text-blue-400 hover:underline">{children}</a>,
+                                    code: ({children}) => <code className="break-all bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">{children}</code>,
+                                    pre: ({children}) => <pre className="overflow-x-auto bg-gray-100 dark:bg-gray-800 p-2 rounded">{children}</pre>
+                                  }}
+                                >
                                   {part.text}
                                 </ReactMarkdown>
                               </div>
@@ -433,9 +450,9 @@ export default function ChatPage() {
                                 return (
                                   <div
                                     key={`${message.id}-researcher-${i}`}
-                                    className="border-l-4 border-blue-500 bg-gray-50 p-4 my-3"
+                                    className="border-l-4 border-blue-500 dark:border-blue-400 bg-gray-50 dark:bg-gray-800/50 p-4 my-3"
                                   >
-                                    <p className="text-sm text-gray-700 mb-3">
+                                    <p className="text-sm text-[var(--foreground)] mb-3">
                                       ✅ Retrieved {filingData.length} SEC filing{filingData.length > 1 ? 's' : ''}
                                     </p>
                                     
@@ -449,37 +466,37 @@ export default function ChatPage() {
                                         reportDate: string;
                                         accessionNumber?: string;
                                       }, idx: number) => (
-                                        <div key={idx} className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm">
+                                        <div key={idx} className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm">
                                           <div className="flex justify-between items-start mb-2">
                                             <div>
-                                              <h4 className="font-semibold text-gray-900">{filing.company}</h4>
-                                              <p className="text-sm text-gray-600">{filing.ticker ? `${filing.ticker} • ` : ''}{filing.cik}</p>
+                                              <h4 className="font-semibold text-[var(--foreground)]">{filing.company}</h4>
+                                              <p className="text-sm text-[var(--foreground-secondary)]">{filing.ticker ? `${filing.ticker} • ` : ''}{filing.cik}</p>
                                             </div>
-                                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded">
                                               {filing.formType}
                                             </span>
                                           </div>
                                           <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div>
-                                              <span className="text-gray-500">Filing Date:</span>
-                                              <p className="font-medium">{filing.filingDate}</p>
+                                              <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{filing.filingDate}</p>
                                             </div>
                                             <div>
-                                              <span className="text-gray-500">Report Date:</span>
-                                              <p className="font-medium">{filing.reportDate}</p>
+                                              <span className="text-[var(--foreground-secondary)]">Report Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{filing.reportDate}</p>
                                             </div>
                                           </div>
                                           {filing.accessionNumber && (
-                                            <div className="mt-3 pt-3 border-t border-gray-100">
-                                              <span className="text-xs text-gray-500">Accession: </span>
-                                              <code className="text-xs bg-gray-100 px-2 py-1 rounded">{filing.accessionNumber}</code>
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <span className="text-xs text-[var(--foreground-secondary)]">Accession: </span>
+                                              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{filing.accessionNumber}</code>
                                             </div>
                                           )}
                                         </div>
                                       ))}
                                     </div>
                                     
-                                    <p className="text-xs text-gray-500 mt-3 italic">
+                                    <p className="text-xs text-[var(--foreground-secondary)] mt-3 italic">
                                       Stored in database for analysis
                                     </p>
                                   </div>
@@ -516,43 +533,43 @@ export default function ChatPage() {
                               return (
                                 <div
                                   key={`${message.id}-content_retriever-${i}`}
-                                  className="border-l-4 border-green-500 bg-gray-50 p-4 my-3"
+                                  className="border-l-4 border-green-500 dark:border-green-400 bg-gray-50 dark:bg-gray-800/50 p-4 my-3"
                                 >
-                                  <p className="text-sm text-gray-700 mb-3">
+                                  <p className="text-sm text-[var(--foreground)] mb-3">
                                     ✅ Content loaded for analysis
                                   </p>
                                   
                                   {filingInfo && (
-                                    <div className="bg-white rounded-lg p-4 border border-gray-100 shadow-sm mb-4">
+                                    <div className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm mb-4">
                                       <div className="flex justify-between items-start mb-2">
                                         <div>
-                                          <h4 className="font-semibold text-gray-900">{filingInfo.company}</h4>
-                                          <p className="text-sm text-gray-600">{filingInfo.ticker ? `${filingInfo.ticker} • ` : ''}{filingInfo.cik}</p>
+                                          <h4 className="font-semibold text-[var(--foreground)]">{filingInfo.company}</h4>
+                                          <p className="text-sm text-[var(--foreground-secondary)]">{filingInfo.ticker ? `${filingInfo.ticker} • ` : ''}{filingInfo.cik}</p>
                                         </div>
-                                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                        <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded">
                                           {filingInfo.form_type}
                                         </span>
                                       </div>
                                       <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                          <span className="text-gray-500">Filing Date:</span>
-                                          <p className="font-medium">{filingInfo.filing_date}</p>
+                                          <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
+                                          <p className="font-medium text-[var(--foreground)]">{filingInfo.filing_date}</p>
                                         </div>
                                         <div>
-                                          <span className="text-gray-500">Report Date:</span>
-                                          <p className="font-medium">{filingInfo.report_date}</p>
+                                          <span className="text-[var(--foreground-secondary)]">Report Date:</span>
+                                          <p className="font-medium text-[var(--foreground)]">{filingInfo.report_date}</p>
                                         </div>
                                       </div>
                                       {filingInfo.accession_number && (
-                                        <div className="mt-3 pt-3 border-t border-gray-100">
-                                          <span className="text-xs text-gray-500">Accession: </span>
-                                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">{filingInfo.accession_number}</code>
+                                        <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                          <span className="text-xs text-[var(--foreground-secondary)]">Accession: </span>
+                                          <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{filingInfo.accession_number}</code>
                                         </div>
                                       )}
                                     </div>
                                   )}
                                   
-                                  <p className="text-xs text-gray-500 italic">
+                                  <p className="text-xs text-[var(--foreground-secondary)] italic">
                                     Ready for AI analysis
                                   </p>
                                 </div>
@@ -576,10 +593,10 @@ export default function ChatPage() {
                 ))}
                 {isThinking && (
                   <div className="flex justify-start">
-                    <div className="max-w-[80%] p-4 rounded-2xl neumorphic-card bg-white">
+                    <div className="max-w-[80%] p-4 rounded-2xl neumorphic-card bg-[var(--card-bg)]">
                       <div className="flex items-center space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                        <span className="text-gray-600 text-sm">
+                        <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce"></div>
+                        <span className="text-[var(--foreground-secondary)] text-sm">
                           AI is thinking...
                         </span>
                       </div>
@@ -590,7 +607,7 @@ export default function ChatPage() {
             )}
           </div>
 
-          <div className="p-6 border-t border-gray-300 bg-white/30 backdrop-blur-sm">
+          <div className="p-6 border-t border-[var(--border-color)] bg-[var(--card-bg)]/30 backdrop-blur-sm">
             <div className="max-w-4xl mx-auto flex space-x-4">
               <div
                 className={`flex-1 neumorphic-container p-4 ${
@@ -599,7 +616,7 @@ export default function ChatPage() {
               >
                 <textarea
                   ref={textareaRef}
-                  className="w-full bg-transparent outline-none text-gray-800 resize-none"
+                  className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)] resize-none"
                   placeholder={
                     tokenLimit.isLimitReached
                       ? 'Conversation limit reached - start a new conversation'

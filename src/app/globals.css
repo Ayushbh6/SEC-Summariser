@@ -1,11 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #e0e0e0;
-  --foreground: #4a5568;
-  --neumorphic-bg: #e0e0e0;
+  --background: #e8e8e8;
+  --foreground: #1a202c;
+  --foreground-secondary: #4a5568;
+  --neumorphic-bg: #e8e8e8;
   --neumorphic-light: #ffffff;
-  --neumorphic-dark: #bebebe;
+  --neumorphic-dark: #c4c4c4;
+  --gradient-from: #e8e8e8;
+  --gradient-to: #d4d4d4;
+  --card-bg: #f5f5f5;
+  --input-bg: #ffffff;
+  --border-color: #d1d5db;
+}
+
+.dark {
+  --background: #1a1a1a;
+  --foreground: #f7fafc;
+  --foreground-secondary: #cbd5e0;
+  --neumorphic-bg: #1a1a1a;
+  --neumorphic-light: #2d2d2d;
+  --neumorphic-dark: #0d0d0d;
+  --gradient-from: #1a1a1a;
+  --gradient-to: #0f0f0f;
+  --card-bg: #242424;
+  --input-bg: #1f1f1f;
+  --border-color: #374151;
 }
 
 @theme inline {
@@ -120,4 +140,20 @@ body {
 .neumorphic-button-primary,
 .neumorphic-icon {
   transition: all 0.2s ease-in-out;
+}
+
+/* Ensure long text and URLs break properly */
+.prose {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.prose code,
+.prose pre {
+  word-break: break-all;
+}
+
+.prose a {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
