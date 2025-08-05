@@ -25,7 +25,7 @@ async function summarizeContent(reportId: string, content: string): Promise<stri
 
     const result = await response.json();
     return result.summary;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

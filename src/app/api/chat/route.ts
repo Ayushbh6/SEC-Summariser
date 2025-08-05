@@ -4,7 +4,7 @@ import '@/lib/polyfills';
 import { google } from '@ai-sdk/google';
 import {
   streamText,
-  convertToCoreMessages,
+  convertToModelMessages,
   tool,
   type ToolSet,
   type UIMessage,
@@ -165,7 +165,7 @@ SOLUTION: Make multiple calls with specific filters:
           }
 
           // Format reports in a more AI-friendly way
-          let output = `Found ${reports.length} stored report(s). Here are the details and full content: ${JSON.stringify(reports.map(r => ({company: r.company_title, ticker: r.company_ticker, cik: r.company_cik, form_type: r.form_type, filing_date: r.filing_date, report_date: r.report_date, accession_number: r.filing_accession_number})))}\n\n`;
+          let output = `Found ${reports.length} stored report(s). Here are the details and full content: ${JSON.stringify(reports.map(r => ({company: r.company_title, ticker: r.company_ticker, cik: r.company_cik, form_type: r.form_type, filing_date: r.filing_date, report_date: r.report_date, accession_number: r.filing_accession_number, filing_url: r.filing_url})))}\n\n`;
           
           reports.forEach((report, index) => {
             output += `=== REPORT ${index + 1} ===\n`;
@@ -174,6 +174,7 @@ SOLUTION: Make multiple calls with specific filters:
             output += `Filing Date: ${report.filing_date}\n`;
             output += `Report Period: ${report.report_date}\n`;
             output += `Accession Number: ${report.filing_accession_number}\n`;
+            output += `Filing URL: ${report.filing_url}\n`;
             output += `Report ID: ${report.id}\n`;
             output += `\n--- CONTENT START ---\n`;
             output += report.report_content[0]?.filing_content || 'Content not available';
@@ -366,6 +367,7 @@ This limit helps maintain optimal performance for all users.`;
             filingDate: r.filing_date,
             reportDate: r.report_date,
             accessionNumber: r.filing_accession_number,
+            filingUrl: r.filing_url,
             reportId: r.id,
           }));
 
@@ -388,6 +390,138 @@ This limit helps maintain optimal performance for all users.`;
         } catch (error: unknown) {
 
           return `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+      },
+    }),
+    get_report_metadata: tool({
+      description:
+        'Retrieves specific metadata fields from stored SEC reports. Use this to get filing URLs, dates, or other report details without retrieving full content.',
+      inputSchema: z.object({
+        company_cik: z
+          .string()
+          .optional()
+          .describe('SEC CIK number to search by'),
+        company_title: z
+          .string()
+          .optional()
+          .describe('Company name to search by (partial match supported)'),
+        company_ticker: z
+          .string()
+          .optional()
+          .describe('Stock ticker symbol to search by'),
+        filing_accession_number: z
+          .string()
+          .optional()
+          .describe('SEC accession number to search by'),
+        filing_date: z
+          .string()
+          .optional()
+          .describe('Specific filing date (YYYY-MM-DD)'),
+        report_date: z
+          .string()
+          .optional()
+          .describe('Specific report period date (YYYY-MM-DD)'),
+        form_type: z
+          .string()
+          .optional()
+          .describe('SEC form type to filter by'),
+        limit: z
+          .number()
+          .optional()
+          .default(5)
+          .describe('Maximum number of results to return (default: 5, max: 10)'),
+      }),
+      execute: async ({
+        company_cik,
+        company_title,
+        company_ticker,
+        filing_accession_number,
+        filing_date,
+        report_date,
+        form_type,
+        limit,
+      }) => {
+        try {
+          const maxResults = Math.min(limit || 5, 10);
+          
+          let query = authenticatedSupabase
+            .from('reports')
+            .select(`
+              company_cik,
+              company_title,
+              company_ticker,
+              filing_accession_number,
+              filing_date,
+              report_date,
+              form_type,
+              filing_url
+            `)
+            .eq('user_id', user.id)
+            .eq('tool_status', 'completed');
+
+          // Apply filters based on provided parameters
+          if (company_cik) query = query.eq('company_cik', company_cik);
+          if (company_ticker) query = query.eq('company_ticker', company_ticker);
+          if (filing_accession_number) query = query.eq('filing_accession_number', filing_accession_number);
+          if (filing_date) query = query.eq('filing_date', filing_date);
+          if (report_date) query = query.eq('report_date', report_date);
+          if (form_type) query = query.eq('form_type', form_type);
+          if (company_title) query = query.ilike('company_title', `%${company_title}%`);
+
+          const { data: reports, error } = await query
+            .order('filing_date', { ascending: false })
+            .limit(maxResults);
+
+          if (error) throw new Error(error.message);
+
+          if (!reports || reports.length === 0) {
+            // Provide smart error guidance
+            const suggestions = [];
+            
+            if (company_ticker && !company_cik && !company_title) {
+              suggestions.push(`Try searching by company name instead of just ticker`);
+            }
+            
+            if (filing_date) {
+              suggestions.push(`Try removing the exact date filter or use a date range instead`);
+            }
+            
+            if (filing_accession_number) {
+              suggestions.push(`Verify the accession number is correct`);
+            }
+            
+            if (company_cik) {
+              suggestions.push(`Verify the CIK number is correct`);
+            }
+            
+            if (form_type && company_title) {
+              suggestions.push(`Try searching without the form_type filter to see all available reports`);
+            }
+            
+            return `No reports found matching your search criteria. ${
+              suggestions.length > 0 
+                ? 'Suggestions: ' + suggestions.join('; ') 
+                : 'Try using the researcher tool to fetch new reports first, or broaden your search parameters.'
+            }`;
+          }
+
+          // Format the metadata in a clear, structured way
+          let output = `Found ${reports.length} report(s) matching your criteria:\n\n`;
+          
+          reports.forEach((report, index) => {
+            output += `📄 Report ${index + 1}:\n`;
+            output += `   Company: ${report.company_title}${report.company_ticker ? ` (${report.company_ticker})` : ''}\n`;
+            output += `   CIK: ${report.company_cik}\n`;
+            output += `   Form Type: ${report.form_type}\n`;
+            output += `   Filing Date: ${report.filing_date}\n`;
+            output += `   Report Date: ${report.report_date}\n`;
+            output += `   Accession Number: ${report.filing_accession_number}\n`;
+            output += `   Filing URL: ${report.filing_url}\n\n`;
+          });
+
+          return output;
+        } catch (error: unknown) {
+          return `An error occurred while retrieving metadata: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
       },
     }),
@@ -437,7 +571,7 @@ This limit helps maintain optimal performance for all users.`;
 
   const assistantMessageId = assistantMessage.id;
 
-  const coreMessages = convertToCoreMessages(messages);
+  const coreMessages = convertToModelMessages(messages);
   
   // Dynamically generate today's date
   const today = new Date();
@@ -447,7 +581,7 @@ This limit helps maintain optimal performance for all users.`;
       day: 'numeric',
   });
 
-  const result = await streamText({
+  const result = streamText({
     model: google('gemini-2.5-flash'),
     system:
       `ATTENTION: Today's date is ${formattedDate}. You MUST use this as the absolute source of truth for any and all date-related calculations or user queries about the current date.
@@ -570,36 +704,52 @@ REMEMBER: Each report's content can be 100,000+ tokens. Retrieving 10 reports wo
 </actions>
 
 <tools_overview>
-You have access to two complementary tools:
+You have access to three specialized SEC analysis tools:
 
-1. **\`researcher\`**: Fetches new SEC filings from the EDGAR database and stores them in the database. This tool does NOT return the actual filing content to you.
+1. **\`researcher\`**: Fetches new SEC filings from the EDGAR database and stores them in the database. This tool does NOT return the actual filing content to you, but provides metadata and filing URLs.
 
-2. **\`content_retriever\`**: Retrieves previously stored filing content from the database for analysis. This tool returns the actual text content that you can analyze.
+2. **\`content_retriever\`**: Retrieves previously stored filing content from the database for analysis. This tool returns the actual text content that you can analyze, along with filing URLs.
 
-**Critical Workflow**: To analyze a filing, you must FIRST use \`researcher\` to fetch and store it, then ALWAYS use \`content_retriever\` to get the actual content for analysis.
+3. **\`get_report_metadata\`**: Queries report metadata (URLs, dates, accession numbers) without loading the heavy content. Perfect for URL queries and checking available reports.
+
+**Critical Workflow**: To analyze a filing, you must FIRST use \`researcher\` to fetch and store it, then use \`content_retriever\` to get the actual content. Use \`get_report_metadata\` when you only need URLs or metadata.
 </tools_overview>
 
 <tool_usage>
-**Two-Tool Workflow - IMPORTANT:**
+**Three-Tool SEC Analysis System:**
 
-**Step 1: Use \`researcher\` tool** to fetch NEW filings from SEC:
+**Tool 1: \`researcher\`** - Fetch NEW filings from SEC EDGAR:
 - Parameters: \`companyIdentifier\`, \`formType\`, \`startDate\` (optional), \`endDate\` (optional), \`limit\` (optional, default: 1)
 - Purpose: Downloads filing from SEC and stores in database
-- Output: Only metadata confirmation (NO actual content)
+- Output: Metadata confirmation with filing URLs (NO actual content)
+- **NEW**: Now includes direct filing URLs for immediate access
 
-**Step 2: Use \`content_retriever\` tool** to get stored content for analysis:
+**Tool 2: \`content_retriever\`** - Get stored filing content for analysis:
 - Parameters: \`company_ticker\`, \`company_cik\`, \`form_type\`, \`filing_accession_number\`, date ranges, \`limit\`
 - Purpose: Retrieves actual filing text from database
-- Output: Full filing content for analysis
+- Output: Full filing content with metadata and filing URLs
+- **NEW**: Enhanced output includes filing URLs for source verification
+
+**Tool 3: \`get_report_metadata\`** - Query report metadata without content:
+- Parameters: \`company_cik\`, \`company_title\`, \`company_ticker\`, \`filing_accession_number\`, \`filing_date\`, \`report_date\`, \`form_type\`, \`limit\` (all optional)
+- Purpose: Retrieve filing URLs, dates, and metadata without loading full content
+- Output: Structured metadata including direct filing URLs
+- **USE CASES**: 
+  - User asks for filing URL specifically
+  - Re-fetching URLs in long conversations
+  - Checking what reports are available
+  - Getting filing metadata without token-heavy content
 
 **When to use each tool:**
 - **New filings**: \`researcher\` → \`content_retriever\`
 - **Previously retrieved filings**: Only \`content_retriever\` (check database first)
+- **Filing URLs or metadata only**: Use \`get_report_metadata\` for efficient retrieval
 - **Analysis requests**: Always use \`content_retriever\` to get content
 
 **Parameter Usage Examples:**
 - "latest," "most recent" → \`researcher\` without dates, limit: 1
 - "latest 3 filings" → \`limit: 3\` (no dates)
+- "What's the URL of Tesla's 8-K?" → \`get_report_metadata\` with company_ticker: "TSLA", form_type: "8-K"
 - "in 2023" → \`startDate: '2023-01-01'\`, \`endDate: '2023-12-31'\`
 - "Q2 2024" → \`startDate: '2024-04-01'\`, \`endDate: '2024-06-30'\`
 </tool_usage>
@@ -610,6 +760,12 @@ You have access to two complementary tools:
 **\`content_retriever\` tool output**: Returns the complete filing text content that you can analyze, along with metadata.
 
 **Response Patterns Based on YOUR INTELLIGENT ASSESSMENT:**
+
+**For URL or Metadata Queries:**
+1. User asks: "What's the URL of..." or "Give me the link to..." → Use \`get_report_metadata\`
+2. User asks: "What reports do you have for..." → Use \`get_report_metadata\` to list available reports
+3. In long conversations when URLs are needed again → Use \`get_report_metadata\` instead of content_retriever
+4. Example: "What's the URL of Tesla's 8-K?" → Use \`get_report_metadata\` with company_ticker: "TSLA", form_type: "8-K"
 
 **For 1-3 Reports (Focused Analysis):**
 1. Use \`researcher\` to fetch reports

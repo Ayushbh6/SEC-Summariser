@@ -465,6 +465,7 @@ export default function ChatPage() {
                                         filingDate: string;
                                         reportDate: string;
                                         accessionNumber?: string;
+                                        filingUrl?: string;
                                       }, idx: number) => (
                                         <div key={idx} className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm">
                                           <div className="flex justify-between items-start mb-2">
@@ -492,6 +493,31 @@ export default function ChatPage() {
                                               <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{filing.accessionNumber}</code>
                                             </div>
                                           )}
+                                          {filing.filingUrl && (
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                  <svg className="w-4 h-4 text-[var(--foreground-secondary)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                  </svg>
+                                                  <code className="text-xs text-[var(--foreground-secondary)] truncate">
+                                                    {filing.filingUrl.split('/').pop()}
+                                                  </code>
+                                                </div>
+                                                <a
+                                                  href={filing.filingUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                                                >
+                                                  Open Filing
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                  </svg>
+                                                </a>
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
                                       ))}
                                     </div>
@@ -516,15 +542,13 @@ export default function ChatPage() {
                           case 'tool-content_retriever':
                             if (part.state === 'output-available') {
                               // Parse the content retriever output to extract filing information
-                              let filingInfo = null;
+                              let filings = [];
                               try {
                                 const output = typeof part.output === 'string' ? part.output : '';
-                                const filingMatch = output.match(/Found (\d+) stored report\(s\)\. Here are the details and full content:\s*([\s\S]*)/); 
+                                const filingMatch = output.match(/Found (\d+) stored report\(s\)\. Here are the details and full content:\s*(\[[\s\S]*?\])/); 
                                 if (filingMatch) {
-                                  const jsonData = JSON.parse(filingMatch[2]);
-                                  if (Array.isArray(jsonData) && jsonData.length > 0) {
-                                    filingInfo = jsonData[0]; // Show first filing for UI
-                                  }
+                                  const jsonStr = filingMatch[2].split('\n\n')[0]; // Get just the JSON part
+                                  filings = JSON.parse(jsonStr);
                                 }
                               } catch {
                                 // Fallback to simple success message
@@ -536,40 +560,69 @@ export default function ChatPage() {
                                   className="border-l-4 border-green-500 dark:border-green-400 bg-gray-50 dark:bg-gray-800/50 p-4 my-3"
                                 >
                                   <p className="text-sm text-[var(--foreground)] mb-3">
-                                    ✅ Content loaded for analysis
+                                    ✅ Content loaded for analysis {filings.length > 0 && `(${filings.length} filing${filings.length > 1 ? 's' : ''})`}
                                   </p>
                                   
-                                  {filingInfo && (
-                                    <div className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm mb-4">
-                                      <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                          <h4 className="font-semibold text-[var(--foreground)]">{filingInfo.company}</h4>
-                                          <p className="text-sm text-[var(--foreground-secondary)]">{filingInfo.ticker ? `${filingInfo.ticker} • ` : ''}{filingInfo.cik}</p>
+                                  {filings.length > 0 && (
+                                    <div className="space-y-3">
+                                      {filings.map((filing: { company: string; ticker?: string; cik: string; formType: string; filingDate: string; reportDate: string; accessionNumber: string; filingUrl?: string }, idx: number) => (
+                                        <div key={idx} className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                              <h4 className="font-semibold text-[var(--foreground)]">{filing.company}</h4>
+                                              <p className="text-sm text-[var(--foreground-secondary)]">{filing.ticker ? `${filing.ticker} • ` : ''}{filing.cik}</p>
+                                            </div>
+                                            <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded">
+                                              {filing.formType}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                              <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{filing.filingDate}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-[var(--foreground-secondary)]">Report Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{filing.reportDate}</p>
+                                            </div>
+                                          </div>
+                                          {filing.accessionNumber && (
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <span className="text-xs text-[var(--foreground-secondary)]">Accession: </span>
+                                              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{filing.accessionNumber}</code>
+                                            </div>
+                                          )}
+                                          {filing.filingUrl && (
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                  <svg className="w-4 h-4 text-[var(--foreground-secondary)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                  </svg>
+                                                  <code className="text-xs text-[var(--foreground-secondary)] truncate">
+                                                    {filing.filingUrl.split('/').pop()}
+                                                  </code>
+                                                </div>
+                                                <a
+                                                  href={filing.filingUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                                                >
+                                                  View Source
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                  </svg>
+                                                </a>
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
-                                        <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium px-2.5 py-0.5 rounded">
-                                          {filingInfo.form_type}
-                                        </span>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                          <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
-                                          <p className="font-medium text-[var(--foreground)]">{filingInfo.filing_date}</p>
-                                        </div>
-                                        <div>
-                                          <span className="text-[var(--foreground-secondary)]">Report Date:</span>
-                                          <p className="font-medium text-[var(--foreground)]">{filingInfo.report_date}</p>
-                                        </div>
-                                      </div>
-                                      {filingInfo.accession_number && (
-                                        <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
-                                          <span className="text-xs text-[var(--foreground-secondary)]">Accession: </span>
-                                          <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{filingInfo.accession_number}</code>
-                                        </div>
-                                      )}
+                                      ))}
                                     </div>
                                   )}
                                   
-                                  <p className="text-xs text-[var(--foreground-secondary)] italic">
+                                  <p className="text-xs text-[var(--foreground-secondary)] mt-3 italic">
                                     Ready for AI analysis
                                   </p>
                                 </div>
@@ -582,6 +635,112 @@ export default function ChatPage() {
                                 className="text-sm text-gray-600 italic py-2"
                               >
                                 📄 Searching your database...
+                              </div>
+                            );
+                          case 'tool-get_report_metadata':
+                            if (part.state === 'output-available') {
+                              // Parse metadata tool output
+                              const reports: Array<{ company: string; ticker?: string; cik: string; formType: string; filingDate: string; reportDate: string; accessionNumber: string; filingUrl: string }> = [];
+                              try {
+                                const output = typeof part.output === 'string' ? part.output : '';
+                                
+                                // Parse each report from the output
+                                const reportMatches = output.matchAll(/📄 Report \d+:\n\s+Company: (.*?)\n\s+CIK: (.*?)\n\s+Form Type: (.*?)\n\s+Filing Date: (.*?)\n\s+Report Date: (.*?)\n\s+Accession Number: (.*?)\n\s+Filing URL: (.*?)\n/g);
+                                
+                                for (const match of reportMatches) {
+                                  const [, company, cik, formType, filingDate, reportDate, accessionNumber, filingUrl] = match;
+                                  reports.push({
+                                    company: company.replace(/\s*\(.*?\)\s*$/, ''),
+                                    ticker: company.match(/\((.*?)\)/)?.[1],
+                                    cik,
+                                    formType,
+                                    filingDate,
+                                    reportDate,
+                                    accessionNumber,
+                                    filingUrl
+                                  });
+                                }
+                              } catch {
+                                // Fallback to raw output
+                              }
+
+                              if (reports.length > 0) {
+                                return (
+                                  <div
+                                    key={`${message.id}-get_report_metadata-${i}`}
+                                    className="border-l-4 border-purple-500 dark:border-purple-400 bg-gray-50 dark:bg-gray-800/50 p-4 my-3"
+                                  >
+                                    <p className="text-sm text-[var(--foreground)] mb-3">
+                                      📊 Found {reports.length} report{reports.length > 1 ? 's' : ''} metadata
+                                    </p>
+                                    
+                                    <div className="space-y-3">
+                                      {reports.map((report: { company: string; ticker?: string; cik: string; formType: string; filingDate: string; reportDate: string; accessionNumber: string; filingUrl: string }, idx: number) => (
+                                        <div key={idx} className="bg-[var(--card-bg)] rounded-lg p-4 border border-[var(--border-color)] shadow-sm">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                              <h4 className="font-semibold text-[var(--foreground)]">{report.company}</h4>
+                                              <p className="text-sm text-[var(--foreground-secondary)]">{report.ticker ? `${report.ticker} • ` : ''}{report.cik}</p>
+                                            </div>
+                                            <span className="bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 text-xs font-medium px-2.5 py-0.5 rounded">
+                                              {report.formType}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                              <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{report.filingDate}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-[var(--foreground-secondary)]">Report Date:</span>
+                                              <p className="font-medium text-[var(--foreground)]">{report.reportDate}</p>
+                                            </div>
+                                          </div>
+                                          {report.accessionNumber && (
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <span className="text-xs text-[var(--foreground-secondary)]">Accession: </span>
+                                              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{report.accessionNumber}</code>
+                                            </div>
+                                          )}
+                                          {report.filingUrl && (
+                                            <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                  <svg className="w-4 h-4 text-[var(--foreground-secondary)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                  </svg>
+                                                  <code className="text-xs text-[var(--foreground-secondary)] truncate">
+                                                    {report.filingUrl.split('/').pop()}
+                                                  </code>
+                                                </div>
+                                                <a
+                                                  href={report.filingUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                                                >
+                                                  Open Filing
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                  </svg>
+                                                </a>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                            
+                            return (
+                              <div
+                                key={`${message.id}-get_report_metadata-${i}`}
+                                className="text-sm text-gray-600 italic py-2"
+                              >
+                                🔎 Retrieving report metadata...
                               </div>
                             );
                           default:
