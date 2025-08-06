@@ -39,6 +39,7 @@ export default function ChatPage() {
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [isThinking, setIsThinking] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const initializationRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -278,16 +279,31 @@ export default function ChatPage() {
         onNewConversation={handleNewConversation}
       />
       
-      <header className="bg-[var(--card-bg)]/50 backdrop-blur-sm border-b border-[var(--border-color)] px-6 py-4">
-        <nav className="flex justify-between items-center">
-          <Link href="/">
-            <div className="neumorphic-container px-6 py-3 cursor-pointer">
-              <h1 className="text-2xl font-bold text-[var(--foreground)]">
-                SEC Summariser
+      <header className="bg-[var(--card-bg)]/50 backdrop-blur-sm border-b border-[var(--border-color)] px-4 lg:px-6 py-3 lg:py-4">
+        <nav className="flex justify-between items-center gap-2">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            className="lg:hidden neumorphic-button p-2"
+            aria-label="Toggle sidebar"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <div className="neumorphic-container px-3 lg:px-6 py-2 lg:py-3 cursor-pointer">
+              <h1 className="text-lg lg:text-2xl font-bold text-[var(--foreground)]">
+                <span className="hidden sm:inline">SEC Summariser</span>
+                <span className="sm:hidden">SEC</span>
               </h1>
             </div>
           </Link>
-          <div className="flex items-center space-x-4">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-4">
             <div className="neumorphic-container px-4 py-2">
               <span className="text-sm text-[var(--foreground-secondary)]">
                 Welcome, {user.user_metadata?.first_name || user.email}
@@ -305,16 +321,51 @@ export default function ChatPage() {
               Sign Out
             </button>
           </div>
+          
+          {/* Mobile Navigation */}
+          <div className="flex lg:hidden items-center gap-2">
+            <ExportButton
+              availableSummaries={summaryStatus.availableSummaries}
+              onExport={handleExportReports}
+            />
+            <div className="neumorphic-container px-2 py-1">
+              <span className="text-xs text-[var(--foreground-secondary)]">
+                {user.user_metadata?.first_name?.charAt(0) || user.email?.charAt(0)}
+              </span>
+            </div>
+            <ThemeToggle />
+            <button
+              onClick={handleSignOut}
+              className="neumorphic-button px-3 py-2 text-xs text-[var(--foreground)] font-medium"
+            >
+              <span className="hidden min-[400px]:inline">Sign Out</span>
+              <span className="min-[400px]:hidden">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </span>
+            </button>
+          </div>
         </nav>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
+        {/* Mobile Backdrop */}
+        {isMobileSidebarOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40" 
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+        
         <ConversationSidebar
           currentConversationId={currentConversationId}
           onConversationSelect={handleConversationSelect}
           onNewConversation={handleNewConversation}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          isMobileOpen={isMobileSidebarOpen}
+          onMobileToggle={() => setIsMobileSidebarOpen(false)}
         />
 
         <div className="flex-1 flex flex-col">
@@ -477,7 +528,7 @@ export default function ChatPage() {
                                               {filing.formType}
                                             </span>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-4 text-sm">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
                                             <div>
                                               <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
                                               <p className="font-medium text-[var(--foreground)]">{filing.filingDate}</p>
@@ -576,7 +627,7 @@ export default function ChatPage() {
                                               {filing.formType}
                                             </span>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-4 text-sm">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
                                             <div>
                                               <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
                                               <p className="font-medium text-[var(--foreground)]">{filing.filingDate}</p>
@@ -686,7 +737,7 @@ export default function ChatPage() {
                                               {report.formType}
                                             </span>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-4 text-sm">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
                                             <div>
                                               <span className="text-[var(--foreground-secondary)]">Filing Date:</span>
                                               <p className="font-medium text-[var(--foreground)]">{report.filingDate}</p>

@@ -10,6 +10,8 @@ interface ConversationSidebarProps {
   onNewConversation: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  isMobileOpen?: boolean;
+  onMobileToggle?: () => void;
 }
 
 export default function ConversationSidebar({ 
@@ -17,7 +19,9 @@ export default function ConversationSidebar({
   onConversationSelect, 
   onNewConversation,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  isMobileOpen = false,
+  onMobileToggle
 }: ConversationSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,16 +101,16 @@ export default function ConversationSidebar({
 
   if (loading) {
     return (
-      <div className="w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex items-center justify-center">
+      <div className="w-full lg:w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex items-center justify-center">
         <div className="text-[var(--foreground-secondary)]">Loading...</div>
       </div>
     );
   }
 
-  // Collapsed view - just show a thin sidebar with toggle button
-  if (isCollapsed) {
+  // Collapsed view - just show a thin sidebar with toggle button (desktop only)
+  if (isCollapsed && !isMobileOpen) {
     return (
-      <div className="w-12 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex flex-col h-full">
+      <div className="hidden lg:flex w-12 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex-col h-full">
         <button
           onClick={onToggleCollapse}
           className="p-3 hover:bg-[var(--neumorphic-bg)] transition-colors"
@@ -121,20 +125,48 @@ export default function ConversationSidebar({
   }
 
   return (
-    <div className="w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] flex flex-col h-full">
+    <>
+      {/* Mobile backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 z-40" 
+          onClick={onMobileToggle}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
+        w-80 bg-[var(--card-bg)] border-r border-[var(--border-color)] 
+        flex flex-col h-full transform transition-transform duration-300 ease-in-out
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       {/* Header */}
       <div className="p-4 border-b border-[var(--border-color)]">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-[var(--foreground)]">Conversations</h2>
-          <button
-            onClick={onToggleCollapse}
-            className="p-1 hover:bg-[var(--neumorphic-bg)] rounded transition-colors"
-            title="Collapse sidebar"
-          >
-            <svg className="w-5 h-5 text-[var(--foreground-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+          <div className="flex gap-2">
+            {/* Mobile close button */}
+            <button
+              onClick={onMobileToggle}
+              className="lg:hidden p-1 hover:bg-[var(--neumorphic-bg)] rounded transition-colors"
+              title="Close sidebar"
+            >
+              <svg className="w-5 h-5 text-[var(--foreground-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            {/* Desktop collapse button */}
+            <button
+              onClick={onToggleCollapse}
+              className="hidden lg:block p-1 hover:bg-[var(--neumorphic-bg)] rounded transition-colors"
+              title="Collapse sidebar"
+            >
+              <svg className="w-5 h-5 text-[var(--foreground-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
         <button
           onClick={handleNewConversation}
@@ -164,7 +196,15 @@ export default function ConversationSidebar({
                     ? 'bg-blue-600/10 dark:bg-blue-400/10 border-blue-600 dark:border-blue-400'
                     : 'hover:bg-[var(--neumorphic-bg)]'
                 }`}
-                onClick={() => !editingId && onConversationSelect(conversation.id)}
+                onClick={() => {
+                  if (!editingId) {
+                    onConversationSelect(conversation.id);
+                    // Close mobile sidebar after selection
+                    if (window.innerWidth < 1024 && onMobileToggle) {
+                      onMobileToggle();
+                    }
+                  }
+                }}
               >
                 {editingId === conversation.id ? (
                   <div className="space-y-2">
@@ -250,5 +290,7 @@ export default function ConversationSidebar({
         )}
       </div>
     </div>
+    </>
+  
   );
 }

@@ -60,24 +60,24 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--gradient-from)] to-[var(--gradient-to)] flex items-center justify-center px-6 py-12 transition-colors duration-300">
       {/* Theme Toggle - positioned absolutely */}
-      <div className="absolute top-6 right-6">
+      <div className="absolute top-4 right-4 lg:top-6 lg:right-6">
         <ThemeToggle />
       </div>
       
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md px-4 lg:px-0">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 lg:mb-8">
           <Link href="/">
-            <div className="neumorphic-container inline-block px-6 py-3 mb-6 cursor-pointer">
-              <h1 className="text-2xl font-bold text-[var(--foreground)]">SEC Summariser</h1>
+            <div className="neumorphic-container inline-block px-4 lg:px-6 py-2 lg:py-3 mb-4 lg:mb-6 cursor-pointer">
+              <h1 className="text-xl lg:text-2xl font-bold text-[var(--foreground)]">SEC Summariser</h1>
             </div>
           </Link>
-          <h2 className="text-3xl font-bold text-[var(--foreground)] mb-2">Create Account</h2>
-          <p className="text-[var(--foreground-secondary)]">Join SEC Summariser to access powerful filing analysis</p>
+          <h2 className="text-2xl lg:text-3xl font-bold text-[var(--foreground)] mb-2">Create Account</h2>
+          <p className="text-sm lg:text-base text-[var(--foreground-secondary)]">Join SEC Summariser to access powerful filing analysis</p>
         </div>
 
         {/* Sign Up Form */}
-        <div className="neumorphic-container-large p-8">
+        <div className="neumorphic-container-large p-6 lg:p-8">
           {success ? (
             <div className="text-center">
               <div className="neumorphic-icon w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -90,19 +90,19 @@ export default function SignUpPage() {
               <p className="text-sm text-[var(--foreground-secondary)]">Redirecting to sign in...</p>
             </div>
           ) : (
-            <form onSubmit={handleSignUp} className="space-y-6">
+            <form onSubmit={handleSignUp} className="space-y-5 lg:space-y-6">
               {/* First Name */}
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-[var(--foreground)] mb-2">
                   First Name
                 </label>
-                <div className="neumorphic-container p-4">
+                <div className="neumorphic-container p-3 lg:p-4">
                   <input
                     id="firstName"
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
+                    className="w-full bg-transparent outline-none text-sm lg:text-base text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
                     placeholder="Enter your first name"
                     required
                   />
@@ -114,13 +114,13 @@ export default function SignUpPage() {
                 <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-2">
                   Email Address
                 </label>
-                <div className="neumorphic-container p-4">
+                <div className="neumorphic-container p-3 lg:p-4">
                   <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
+                    className="w-full bg-transparent outline-none text-sm lg:text-base text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
                     placeholder="Enter your email"
                     required
                   />
@@ -132,13 +132,13 @@ export default function SignUpPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-[var(--foreground)] mb-2">
                   Password
                 </label>
-                <div className="neumorphic-container p-4">
+                <div className="neumorphic-container p-3 lg:p-4">
                   <input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent outline-none text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
+                    className="w-full bg-transparent outline-none text-sm lg:text-base text-[var(--foreground)] placeholder-[var(--foreground-secondary)]"
                     placeholder="Create a password (min. 6 characters)"
                     required
                   />
@@ -156,7 +156,7 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full neumorphic-button-primary py-4 text-lg font-semibold text-white transition-all duration-200 hover:neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full neumorphic-button-primary py-3 lg:py-4 text-base lg:text-lg font-semibold text-white transition-all duration-200 hover:neumorphic-pressed disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </button>
